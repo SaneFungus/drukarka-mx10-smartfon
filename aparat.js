@@ -2,7 +2,9 @@
 /* Aparat w aplikacji: obraz na żywo -> spust -> podgląd kropek -> Drukuj.
    Zdjęcie drukuje się osobno, bez reszty treści. "Edytuj" dokłada je do wydruku w głównym ekranie.
    Warstwa 'aparat' = obraz na żywo, warstwa 'zdjecie' = zrobione zdjęcie (obsługa Wstecz w ekran.js). */
-const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0 };
+const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0, zTwarzy:false };
+/* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie albo aparat -> twarz -> zdjęcie (twarz.js). */
+const apGlebia = () => warstwa === 'zdjecie' ? (ap.zTwarzy ? 3 : 2) : warstwa === 'twarz' ? 2 : 1;
 
 /* ======================= OBRAZ NA ŻYWO ======================= */
 function apZatrzymaj() {
@@ -55,11 +57,12 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ======================= ZROBIONE ZDJĘCIE ======================= */
-function apPokaz(src) {
-  if (warstwa !== 'aparat') { obrazy.delete(src); return; }
-  ap.b = { ...noweZdjecie(src, 'Zdjęcie z aparatu'), dither:ust.apStyl, bright:ust.apJasnosc };
+function apPokaz(src, nazwa = 'Zdjęcie z aparatu') {
+  if (warstwa !== 'aparat' && warstwa !== 'twarz') { obrazy.delete(src); return; }
+  ap.zTwarzy = warstwa === 'twarz';
+  ap.b = { ...noweZdjecie(src, nazwa), dither:ust.apStyl, bright:ust.apJasnosc };
   ap.od = performance.now();
-  $('ap-powtorz').textContent = 'Powtórz';
+  $('ap-powtorz').textContent = ap.zTwarzy ? 'Dopasuj' : 'Powtórz';
   $('ap-style').innerHTML = RASTRY.map(([v, t]) => wcisk(`data-styl="${v}"`, t, v === ust.apStyl)).join('');
   $('ap-jasnosc').value = ust.apJasnosc; $('ap-o-jasnosc').textContent = ust.apJasnosc;
   if (!drukuje) powiedz('');
@@ -83,7 +86,10 @@ const apZaWczesnie = () => performance.now() - ap.od < 400;   // drugie dotknię
 $('ap-spust').addEventListener('click', async () => {
   const v = $('ap-wideo'); if (!ap.strumien || !v.videoWidth) return;
   $('ap-spust').disabled = true;
-  try { apPokaz(await zObrazu(v, v.videoWidth, v.videoHeight)); }
+  try {
+    const src = await zObrazu(v, v.videoWidth, v.videoHeight);
+    if (ust.apTryb === 'twarz') twUjecie(src, ramaDla(v.videoWidth, v.videoHeight)); else apPokaz(src);
+  }
   catch { apInfo('Nie udało się zrobić zdjęcia. Spróbuj jeszcze raz.'); setTimeout(() => apInfo(''), 3000); }
   finally { $('ap-spust').disabled = !ap.strumien; }
 });
@@ -97,7 +103,7 @@ for (const id of ['ap-telefon', 'ap-telefon2']) $(id).addEventListener('click', 
 $('aparat').addEventListener('cancel', () => { if (warstwa === 'aparat' && !ap.strumien) apUruchom(); });
 $('aparat').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const src = await zPliku(f); apZatrzymaj(); apPokaz(src); }
+  try { const src = await zPliku(f); apZatrzymaj(); if (ust.apTryb === 'twarz') twZPliku(src); else apPokaz(src); }
   catch { apZatrzymaj(); apInfo('Nie udało się odczytać tego zdjęcia.', true); }
 });
 
@@ -112,19 +118,19 @@ $('ap-jasnosc').addEventListener('input', e => {
   ap.b.bright = ust.apJasnosc = +e.target.value; $('ap-o-jasnosc').textContent = ust.apJasnosc; zapisz();
   if (!ap.zaplanowane) ap.zaplanowane = requestAnimationFrame(() => { ap.zaplanowane = 0; apPrzelicz(); });
 });
-$('ap-zamknij').addEventListener('click', () => zamknijWarstwe(warstwa === 'zdjecie' ? 2 : 1));
+$('ap-zamknij').addEventListener('click', () => zamknijWarstwe(apGlebia()));
 $('ap-powtorz').addEventListener('click', () => { if (!apZaWczesnie()) zamknijWarstwe(); });
 $('ap-edytuj').addEventListener('click', () => {
   if (apZaWczesnie() || !ap.b || bloki.includes(ap.b)) return;
   zapamietaj(); bloki.push(ap.b); wybrany = ap.b.id;
-  zamknijWarstwe(2); otworzZakladke('wyglad'); odswiezTeraz(); zapisz(); przewinDoWybranego();
+  zamknijWarstwe(apGlebia()); if (ap.zTwarzy) twWyczysc();   // złożona twarz jest już w treści otworzZakladke('wyglad'); odswiezTeraz(); zapisz(); przewinDoWybranego();
 });
 $('ap-drukuj').addEventListener('click', async () => {
   if (apZaWczesnie() || !ap.b || drukuje) return;
   apPrzelicz(); apZatrzymaj();                  // podczas druku aparat nie zużywa baterii
   const b = ap.b;
   await drukujZadania([{ ...ap.kropki, energy:ust.energy, feed:ust.feed }], 'Drukuję zdjęcie…');
-  if (ap.b === b && $('komunikat').classList.contains('dobrze')) $('ap-powtorz').textContent = 'Następne';
+  if (ap.b === b && !ap.zTwarzy && $('komunikat').classList.contains('dobrze')) $('ap-powtorz').textContent = 'Następne';
 });
 $('ap-stop').addEventListener('click', () => { przerwij = true; });
 new ResizeObserver(apRozmiar).observe($('ap-papier').parentElement);

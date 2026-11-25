@@ -96,19 +96,20 @@ new ResizeObserver(() => { rozmiarPodgladu(); rysujRamke(); }).observe($('stol')
 let warstwa = null, wraca = false;
 function ustawWarstwe(w) {
   warstwa = w;
-  $('app').inert = w === 'kadr' || w === 'aparat' || w === 'zdjecie';   // to, co pod spodem, nie reaguje
+  $('app').inert = w === 'kadr' || w === 'aparat' || w === 'zdjecie' || w === 'twarz';   // to, co pod spodem, nie reaguje
   document.body.classList.toggle('pelny', w === 'pelny');
   $('kadrowanie').hidden = w !== 'kadr';
   $('zoom').hidden = w !== 'pelny';
   if (w !== 'pelny') { powieksz = false; $('zoom').textContent = 'Powiększ 2×'; }
   $('pelny').setAttribute('aria-label', w === 'pelny' ? 'Pokaż narzędzia' : 'Pokaż sam podgląd');
   $('pelny').querySelector('use').setAttribute('href', w === 'pelny' ? '#i-zwin' : '#i-pelny');
-  apWarstwa(w);
+  apWarstwa(w); twWarstwa(w);
   rozmiarPodgladu(); rysujRamke();
 }
 function otworzWarstwe(w) { history.pushState({ warstwa:w }, ''); ustawWarstwe(w); }
 function zamknijWarstwe(ile = 1) { if (warstwa && !wraca) { wraca = true; history.go(-ile); } }   // wraca: szybkie drugie dotknięcie nie cofa dwa razy
-addEventListener('popstate', e => { wraca = false; ustawWarstwe(warstwa === 'zdjecie' && e.state && e.state.warstwa === 'aparat' ? 'aparat' : null); });
+const WSTECZ = { zdjecie:['aparat', 'twarz'], twarz:['aparat'] };   // warstwy, do których wolno wrócić przyciskiem Wstecz
+addEventListener('popstate', e => { wraca = false; const cel = e.state && e.state.warstwa; ustawWarstwe((WSTECZ[warstwa] || []).includes(cel) ? cel : null); });
 $('pelny').addEventListener('click', () => warstwa ? zamknijWarstwe() : otworzWarstwe('pelny'));
 $('zoom').addEventListener('click', () => { powieksz = !powieksz; $('zoom').textContent = powieksz ? 'Dopasuj' : 'Powiększ 2×'; rozmiarPodgladu(); });
 

@@ -103,13 +103,28 @@
 </div>
 
 <div id="foto" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Aparat">
-  <div class="foto-gora"><button class="ikona" id="ap-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><button id="ap-telefon">Aparat telefonu</button></div>
+  <div class="foto-gora"><button class="ikona" id="ap-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button>
+    <div class="foto-gora-prawa"><button id="ap-porady" hidden>Porady</button><button id="tw-galeria" hidden>Z galerii</button><button id="ap-telefon">Aparat telefonu</button></div></div>
   <div class="foto-srodek" id="ap-zywo">
     <div class="kadr-pole">
       <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
+      <canvas id="tw-nakladka" hidden aria-hidden="true"></canvas>
+      <div id="tw-krok" hidden role="status"><p><strong id="tw-krok-nr"></strong><span id="tw-krok-rada"></span></p><button id="tw-krok-przycisk" hidden></button></div>
       <div id="ap-info" role="status" hidden><p id="ap-info-tekst"></p><button id="ap-telefon2" hidden>Użyj aparatu telefonu</button></div>
+      <div id="tw-porady" hidden>
+        <p class="tytul">Twarz z trzech zdjęć</p>
+        <p>Zrobisz trzy zdjęcia: czoło, potem oczy i nos, potem usta i brodę. Program złoży z nich jedną twarz.</p>
+        <ul>
+          <li>Patrz prosto w obiektyw, nie przechylaj głowy.</li>
+          <li>Policzki mają dotykać konturu. Wtedy każda twarz wyjdzie w tej samej skali.</li>
+          <li>Światło z przodu, nie z boku. Cień z jednej strony zdradzi szew.</li>
+          <li>Najlepiej, gdy zdjęcie robi ktoś inny, tylnym aparatem, z około pół metra. Przednim aparatem z bliska nos wychodzi większy.</li>
+        </ul>
+        <button class="glowny" id="tw-zaczynam">Zaczynam</button>
+      </div>
     </div>
     <div class="foto-dol spusty">
+      <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button></div>
       <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
       <button id="ap-spust" aria-label="Zrób zdjęcie" disabled></button>
       <button class="ikona" id="ap-zamien" aria-label="Przełącz aparat przedni i tylny" hidden><svg><use href="#i-zamien"/></svg></button>
@@ -126,6 +141,21 @@
   <div class="foto-stan"><p id="ap-stan" role="status"></p><button id="ap-stop" hidden>Stop</button></div>
 </div>
 
+<div id="twarz" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Dopasowanie twarzy">
+  <div class="foto-gora"><button class="ikona" id="tw-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><p class="tw-tytul">Dopasuj fragmenty</p><button id="tw-od-nowa">Od nowa</button></div>
+  <div class="foto-srodek">
+    <div class="kadr-pole"><canvas id="tw-podglad" width="384" height="512" role="img" aria-label="Twarz złożona z trzech zdjęć"></canvas></div>
+    <div class="foto-dol">
+      <p class="podp">Przeciągnij fragment palcem, żeby go przesunąć.</p>
+      <div class="chipy" id="tw-czesci" role="group" aria-label="Fragment"><button data-czesc="0">Czoło</button><button data-czesc="1">Oczy i nos</button><button data-czesc="2">Usta i broda</button></div>
+      <label><span class="etykieta">Rozmiar fragmentu <output id="tw-o-rozmiar"></output></span><input type="range" id="tw-rozmiar" min="70" max="140" step="1"></label>
+      <label><span class="etykieta">Jasność fragmentu <output id="tw-o-jasnosc"></output></span><input type="range" id="tw-jasnosc" min="-60" max="60" step="1"></label>
+      <div class="chipy" role="group" aria-label="Szew"><button data-szew="ostry">Ostry szew</button><button data-szew="miekki">Miękki szew</button><button id="tw-wyrownaj">Wyrównaj jasność</button></div>
+      <div class="rzad"><button id="tw-powtorz">Zrób ponownie</button><button class="glowny" id="tw-dalej">Dalej</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="kadrowanie" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
   <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
   <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
@@ -135,10 +165,12 @@
 <div id="dymek" hidden role="status"><span id="dymek-tekst"></span><button id="dymek-cofnij">Cofnij</button></div>
 <input type="file" id="plik" accept="image/*" multiple hidden>
 <input type="file" id="aparat" accept="image/*" capture="environment" hidden>
+<input type="file" id="tw-plik" accept="image/*" hidden>
 
 <script src="rdzen.js"></script>
 <script src="drukarka.js"></script>
 <script src="aparat.js"></script>
+<script src="twarz.js"></script>
 <script src="ekran.js"></script>
 </body>
 </html>

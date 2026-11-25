@@ -124,6 +124,26 @@ nav button.glowny[aria-selected=true]{box-shadow:inset 0 0 0 3px var(--marker-te
 #foto #ap-spust{width:76px;height:76px;padding:0;border-radius:50%;background:#f2f4f5;border:5px solid #14171a;box-shadow:0 0 0 3px #f2f4f5;margin:3px}
 #ap-drukuj{flex:1.6 1 0;font-size:18px}
 #foto .foto-dol .rzad>button{min-height:56px}
+.foto-gora-prawa{display:flex;gap:8px;min-width:0}
+.tryby{grid-column:1 / -1;display:flex;gap:8px;justify-content:center;margin-bottom:10px}
+.tryby button{min-height:44px}
+#tw-nakladka{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#tw-nakladka.lustro{transform:scaleX(-1)}
+#tw-krok{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;gap:8px;background:rgba(20,23,26,.8);border-radius:12px;padding:6px 6px 6px 12px}
+#tw-krok p{margin:0;flex:1 1 0;min-width:0;font-size:14px;line-height:1.3}
+#tw-krok strong{display:block;font-size:16px}
+#tw-krok button{flex:none;min-height:44px}
+#tw-porady{position:absolute;inset:8px;overflow:auto;background:rgba(20,23,26,.95);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:4px}
+#tw-porady p,#tw-porady ul{margin:0 0 8px}
+#tw-porady ul{padding-left:20px}
+#tw-porady li{margin-bottom:6px}
+#tw-porady button{min-height:56px;margin-top:auto;flex:none}
+.tw-tytul{margin:0;align-self:center;font-weight:600;min-width:0}
+#tw-podglad{display:block;touch-action:none;background:#fdfdfb;cursor:grab}
+#twarz .podp{text-align:center;margin:0 0 6px}
+#twarz .foto-dol .rzad{margin-top:4px}
+#twarz .foto-dol .rzad>button{min-height:56px}
+#tw-dalej{flex:1.6 1 0;font-size:18px}
 .foto-stan{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .foto-stan p{margin:8px 0 0;font-size:15px}
 .foto-stan p:empty{display:none}
@@ -136,6 +156,7 @@ nav button.glowny[aria-selected=true]{box-shadow:inset 0 0 0 3px var(--marker-te
   .foto-dol.spusty{width:auto;grid-template:1fr auto 1fr / auto;gap:12px;align-self:stretch}
   #ap-lampa,#ap-spust,#ap-zamien{grid-column:1}
   #ap-lampa{grid-row:1}#ap-spust{grid-row:2}#ap-zamien{grid-row:3}
+  .tryby{grid-column:1;grid-row:4;flex-direction:column;margin:0}
 }
 
 #dymek{position:fixed;left:16px;right:16px;bottom:calc(88px + env(safe-area-inset-bottom));max-width:420px;margin:0 auto;background:var(--tusz);color:var(--blat);border-radius:12px;padding:4px 4px 4px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:5}
