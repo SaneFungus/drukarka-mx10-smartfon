@@ -1,11 +1,11 @@
 'use strict';
 /* Praca bez internetu: najpierw sieć (żeby zawsze była najnowsza wersja), a bez sieci ostatnia zapamiętana kopia.
    Kasowane są tylko własne kopie (przedrostek "mx10-"), bo inne strony z tego samego adresu też mogą je mieć. */
-const KOPIA = 'mx10-1';
-const PLIKI = ['./', 'manifest.webmanifest', 'ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maska-512.png'];
+const KOPIA = 'mx10-2';
+const PLIKI = ['./', 'styl.css', 'rdzen.js', 'drukarka.js', 'ekran.js', 'manifest.webmanifest','ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maska-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(KOPIA).then(k => k.addAll(PLIKI)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(KOPIA).then(k => k.addAll(PLIKI.map(p => new Request(p, { cache:'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -18,7 +18,8 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const k = await caches.open(KOPIA);
     try {
-      const o = await fetch(z, { signal:AbortSignal.timeout(4000) });
+      // no-cache: pytaj serwer o świeżość, żeby po aktualizacji nie zmieszać starych i nowych plików
+      const o = await fetch(z.url, { cache:'no-cache', signal:AbortSignal.timeout(4000) });
       if (o.ok) await k.put(z, o.clone());
       return o;
     } catch (blad) {

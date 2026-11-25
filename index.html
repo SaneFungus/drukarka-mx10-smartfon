@@ -2,770 +2,114 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#252b30" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikony/ikona-192.png" type="image/png">
+<link rel="stylesheet" href="styl.css">
 <title>MX10 – smartfon</title>
-<style>
-:root{
-  --blat:#d5dbde; --panel:#eef1f2; --pole:#ffffff; --linia:#b4bec3; --tusz:#1b1f2a; --cichy:#525d66;
-  --marker:#b8264d; --marker-tekst:#ffffff; --papier:#fdfdfb; --ok:#1c7a4a; --uwaga:#8a5a00;
-  --font:"Segoe UI",system-ui,sans-serif; --znak:"Bahnschrift","Segoe UI",system-ui,sans-serif;
-}
-@media (prefers-color-scheme:dark){
-  :root{--blat:#1a1e22;--panel:#252b30;--pole:#1c2125;--linia:#434d54;--tusz:#e6eaec;--cichy:#a3afb6;
-        --marker:#e8557b;--marker-tekst:#1a0810;--papier:#f1f1ee;--ok:#5fcf95;--uwaga:#e3b04b}
-}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-body{margin:0;background:var(--blat);color:var(--tusz);font:15px/1.45 var(--font)}
-button,input,select,textarea{font:inherit;color:inherit}
-button{background:var(--pole);border:1px solid var(--linia);border-radius:6px;padding:8px 14px;min-height:40px;cursor:pointer}
-button:hover:not(:disabled){border-color:var(--tusz)}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.glowny{background:var(--marker);border-color:var(--marker);color:var(--marker-tekst);font-weight:600}
-:focus-visible{outline:3px solid var(--marker);outline-offset:2px}
-select,input[type=text],input[type=number],textarea{background:var(--pole);border:1px solid var(--linia);border-radius:6px;padding:8px 10px;min-height:40px;width:100%}
-textarea{resize:vertical;min-height:96px;display:block}
-input[type=range]{width:100%;accent-color:var(--marker);height:28px;margin:0}
-input[type=checkbox]{width:18px;height:18px;accent-color:var(--marker);margin:0;flex:none}
-label{display:block}
-summary{cursor:pointer;padding:8px 0;font-weight:600}
-
-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 24px;border-bottom:1px solid var(--linia);background:var(--panel)}
-h1{font:600 20px/1 var(--znak);margin:0;margin-right:auto}
-h2{font:600 16px/1.2 var(--znak);margin:0}
-#stan{display:flex;align-items:center;gap:8px;color:var(--cichy)}
-#stan::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--linia)}
-#stan.jest{color:var(--tusz)} #stan.jest::before{background:var(--ok)}
-#stan.trwa::before{background:var(--uwaga)}
-
-main{display:grid;grid-template-columns:minmax(0,1fr) 502px;gap:24px;max-width:1280px;margin:0 auto;padding:24px;align-items:start}
-.prawa{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 48px);overflow-y:auto}
-.prawa>.karta:first-child{flex:none}
-.karta{background:var(--panel);border:1px solid var(--linia);border-radius:10px;padding:16px}
-.dodaj{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-#bloki{display:flex;flex-direction:column;gap:16px}
-.blok-glowa{display:flex;align-items:center;gap:6px;margin-bottom:12px}
-.blok-glowa h2{margin-right:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.blok-glowa button{padding:0;width:40px;flex:none}
-.siatka{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px;margin-top:12px}
-.etykieta{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--cichy);margin-bottom:4px}
-.etykieta output{color:var(--tusz);font-variant-numeric:tabular-nums}
-.znaczniki{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:12px}
-.znaczniki label{display:flex;align-items:center;gap:8px;min-height:36px}
-.podp{font-size:13px;color:var(--cichy);margin:6px 0 0}
-.podp.zle{color:var(--marker)}
-.kadr{max-width:100%;display:block;cursor:crosshair;touch-action:none;border:1px solid var(--linia);margin:4px 0 8px}
-.pusto{border:2px dashed var(--linia);border-radius:10px;padding:40px 24px;text-align:center;color:var(--cichy)}
-body.upuszczanie{box-shadow:inset 0 0 0 5px var(--marker)}
-
-.przyciski{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.przyciski .glowny{flex:1 1 150px}
-progress{width:100%;height:8px;accent-color:var(--marker);display:block;margin-top:12px}
-#komunikat{margin:12px 0 0;min-height:1.45em}
-#komunikat.blad{color:var(--marker);font-weight:600}
-#komunikat.dobrze{color:var(--ok)}
-.podglad-glowa{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-.podglad-glowa span{margin-left:auto;color:var(--cichy);font-variant-numeric:tabular-nums}
-.podglad-glowa button{min-height:32px;padding:2px 10px}
-.podglad{flex:1 1 auto;min-height:160px;display:flex;flex-direction:column}
-#okno{overflow:auto;scrollbar-gutter:stable;flex:1 1 auto;min-height:0}
-#tasma{display:block;background:var(--papier);padding:14px 33px 26px;width:max-content;max-width:100%;border-bottom:6px solid var(--marker)}
-#tasma.x2{max-width:none}
-#plotno{display:block;width:384px;max-width:100%;image-rendering:pixelated}
-#tasma.x2 #plotno{width:768px;max-width:none}
-#dziennik{font:12px/1.4 Consolas,monospace;max-height:160px;overflow:auto;background:var(--pole);border:1px solid var(--linia);border-radius:6px;padding:8px;margin:8px 0;white-space:pre-wrap;word-break:break-all}
-#dymek{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--tusz);color:var(--blat);border-radius:8px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:12px;z-index:5}
-#dymek button{background:transparent;color:inherit;border-color:currentColor;min-height:32px;padding:2px 12px}
-#brak{background:var(--marker);color:var(--marker-tekst);padding:12px 24px;margin:0}
-
-@media (max-width:980px){
-  main{grid-template-columns:minmax(0,1fr);padding:16px;gap:16px}
-  .prawa{position:static;max-height:none;overflow:visible}
-  header{padding:12px 16px}
-  #tasma{padding:14px 8px 26px}
-  #okno{max-height:70vh}
-}
-@media (max-width:420px){.siatka{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}}
-</style>
 </head>
 <body>
-<header>
-  <h1>MX10 – smartfon</h1>
-  <div id="stan" role="status">Niepołączona</div>
-  <button id="instaluj" hidden>Zainstaluj aplikację</button>
-  <button id="polacz">Połącz z drukarką</button>
-</header>
-<p id="brak" hidden>Ta przeglądarka nie obsługuje Bluetooth na stronach. Otwórz plik w Google Chrome lub Microsoft Edge. Podgląd działa, drukowanie nie.</p>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-cofnij" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-pelny" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></symbol>
+    <symbol id="i-zwin" viewBox="0 0 24 24"><path d="M19 10h-5V5M14 10l7-7M5 14h5v5M10 14l-7 7"/></symbol>
+    <symbol id="i-tekst" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+    <symbol id="i-zdjecie" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5"/><circle cx="15.5" cy="9" r="1.5"/></symbol>
+    <symbol id="i-aparat" viewBox="0 0 24 24"><path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-odstep" viewBox="0 0 24 24"><path d="M4 12h16M12 3v5M9.5 5.5 12 3l2.5 2.5M12 21v-5M9.5 18.5 12 21l2.5-2.5"/></symbol>
+    <symbol id="i-tresc" viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19zM13 7l4 4"/></symbol>
+    <symbol id="i-wyglad" viewBox="0 0 24 24"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></symbol>
+    <symbol id="i-ust" viewBox="0 0 24 24"><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/><circle cx="12" cy="12" r="3.2"/></symbol>
+  </defs>
+</svg>
 
-<main>
-  <section aria-label="Treść wydruku">
-    <div class="dodaj">
-      <button data-dodaj="text">+ Tekst</button>
-      <button data-dodaj="image">+ Zdjęcie</button>
-      <button data-dodaj="space">+ Odstęp lub linia</button>
+<div id="app">
+  <header>
+    <h1>MX10 – smartfon</h1>
+    <button id="stan" class="niepolaczona"><span id="stan-tekst">Połącz</span></button>
+    <button class="ikona" id="cofnij" aria-label="Cofnij ostatnią zmianę" disabled><svg><use href="#i-cofnij"/></svg></button>
+    <button class="ikona" id="pelny" aria-label="Pokaż sam podgląd"><svg><use href="#i-pelny"/></svg></button>
+  </header>
+
+  <main id="stol" aria-label="Podgląd wydruku">
+    <div id="tasma" hidden><canvas id="plotno" width="384" height="1" role="img" aria-label="Podgląd kropek na papierze"></canvas><div id="ramka" hidden></div></div>
+    <div id="pusto">
+      <p>Tu zobaczysz swój wydruk.</p>
+      <div class="rzad"><button data-dodaj="text"><svg><use href="#i-tekst"/></svg>Wpisz tekst</button><button data-dodaj="galeria"><svg><use href="#i-zdjecie"/></svg>Dodaj zdjęcie</button></div>
     </div>
-    <input type="file" id="plik" accept="image/*" multiple hidden>
-    <div id="bloki"></div>
-  </section>
+  </main>
+  <button id="zoom" hidden>Powiększ 2×</button>
 
-  <aside class="prawa" aria-label="Druk i podgląd">
-    <div class="karta">
-      <div class="siatka" style="margin-top:0">
-        <label><span class="etykieta">Moc grzania <output id="o-energy"></output></span>
-          <input type="range" data-s="energy" min="4000" max="40000" step="500"></label>
-        <label><span class="etykieta">Liczba kopii</span>
-          <input type="number" data-s="copies" min="1" max="50" step="1"></label>
-      </div>
-      <div class="przyciski">
-        <button class="glowny" id="drukuj">Drukuj</button>
-        <button id="stop" hidden>Stop</button>
-        <button id="wysun">Wysuń papier</button>
-      </div>
-      <progress id="postep" max="1" value="0" hidden aria-label="Postęp wysyłania"></progress>
-      <p id="komunikat" role="status"></p>
-      <details>
-        <summary>Ustawienia i test</summary>
-        <div class="siatka">
-          <label><span class="etykieta">Tempo druku</span>
-            <select data-s="speed"><option value="24">Szybkie</option><option value="32">Zwykłe</option><option value="36">Wolne, dokładniejsze</option></select></label>
-          <label><span class="etykieta">Wysuw po wydruku <output id="o-feed"></output></span>
-            <input type="range" data-s="feed" min="0" max="320" step="8"></label>
-          <label><span class="etykieta">Pauza między liniami <output id="o-delay"></output></span>
-            <input type="range" data-s="delay" min="5" max="60" step="1"></label>
-          <label><span class="etykieta">Sposób wysuwu</span>
-            <select data-s="feedMode"><option value="lines">Puste linie</option><option value="cmd">Komenda A1</option></select></label>
-          <label><span class="etykieta">Wielkość paczki Bluetooth</span>
-            <select data-s="pakiet"><option value="0">Cała linia naraz</option><option value="20">Po 20 bajtów (bezpieczniej)</option></select></label>
-        </div>
-        <p class="podp"><strong>Test telefonu:</strong> drukuje dwa takie same wzory, A i B, każdy wysłany inaczej. Sprawdź, który wyszedł czysto.</p>
-        <div class="przyciski"><button id="testTel">Drukuj test telefonu</button></div>
-        <p class="podp">Pasek testowy drukuje ten sam wzór w sześciu mocach. Wybierz najlepszy i ustaw jego liczbę suwakiem „Moc grzania”.</p>
-        <div class="przyciski"><button id="test">Drukuj pasek testowy</button><button id="inne">Szukaj wszystkich urządzeń</button></div>
-        <details><summary>Dziennik połączenia</summary>
-          <pre id="dziennik"></pre><button id="kopiuj">Kopiuj dziennik</button></details>
+  <div id="dol">
+    <p id="brak" hidden>Ta przeglądarka nie obsługuje Bluetooth na stronach. Otwórz ten adres w Google Chrome. Podgląd działa, drukowanie nie.</p>
+    <p id="komunikat" role="status"></p>
+    <section id="panel">
+      <div class="widok" data-widok="tresc"></div>
+      <div class="widok" data-widok="wyglad" hidden></div>
+      <div class="widok" data-widok="ust" hidden>
+        <div class="rzad"><button id="wysun">Wysuń papier</button><button id="test">Pasek testowy</button></div>
+        <p class="podp">Pasek testowy drukuje ten sam wzór w sześciu mocach. Najlepszą ustawisz pod „Drukuj”.</p>
+        <div class="rzad"><button id="polacz">Połącz z drukarką</button></div>
+        <div class="rzad" id="blok-instaluj" hidden><button id="instaluj">Zainstaluj aplikację</button></div>
+        <details>
+          <summary>Zaawansowane</summary>
+          <div class="pola">
+            <label><span class="etykieta">Tempo druku</span>
+              <select data-s="speed"><option value="24">Szybkie</option><option value="32">Zwykłe</option><option value="36">Wolne, dokładniejsze</option></select></label>
+            <label><span class="etykieta">Wysuw po wydruku <output id="o-feed"></output></span>
+              <input type="range" data-s="feed" min="0" max="320" step="8"></label>
+            <label><span class="etykieta">Pauza między liniami <output id="o-delay"></output></span>
+              <input type="range" data-s="delay" min="5" max="60" step="1"></label>
+            <label><span class="etykieta">Sposób wysuwu</span>
+              <select data-s="feedMode"><option value="lines">Puste linie</option><option value="cmd">Komenda A1</option></select></label>
+            <label><span class="etykieta">Wielkość paczki Bluetooth</span>
+              <select data-s="pakiet"><option value="20">Po 20 bajtów (bezpieczniej)</option><option value="0">Cała linia naraz</option></select></label>
+          </div>
+          <div class="rzad"><button id="testTel">Test telefonu</button><button id="inne">Szukaj wszystkich urządzeń</button></div>
+        </details>
+        <details>
+          <summary>Dziennik połączenia</summary>
+          <pre id="dziennik"></pre>
+          <div class="rzad"><button id="kopiuj">Kopiuj dziennik</button></div>
+        </details>
         <p class="podp" id="wersja"></p>
-      </details>
-    </div>
-    <div class="karta podglad">
-      <div class="podglad-glowa"><h2>Podgląd</h2><span id="dlugosc"></span><button id="zoom" aria-pressed="false">Powiększ 2×</button></div>
-      <div id="okno" tabindex="0" aria-label="Podgląd wydruku"><div id="tasma"><canvas id="plotno" width="384" height="1" role="img" aria-label="Podgląd kropek na papierze"></canvas></div></div>
-    </div>
-  </aside>
-</main>
-<div id="dymek" hidden role="status"><span id="dymek-tekst"></span><button id="cofnij">Cofnij</button></div>
-
-<script>
-'use strict';
-/* ======================= STAŁE I STAN ======================= */
-const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.1 (2026-11-25)';
-const PUNKTY_NA_CM = 80;                      // 384 punkty = 48 mm druku
-const $ = id => document.getElementById(id);
-const CZCIONKI = ['Segoe UI','Arial','Arial Black','Bahnschrift','Calibri','Cambria','Candara','Comic Sans MS','Consolas',
-  'Constantia','Corbel','Courier New','Franklin Gothic Medium','Gabriola','Georgia','Impact','Ink Free','Lucida Console',
-  'Palatino Linotype','Segoe Print','Segoe Script','Sitka Text','Tahoma','Times New Roman','Trebuchet MS','Verdana'];
-const DOMYSLNE = { energy:16000, speed:32, copies:1, feed:128, feedMode:'lines', delay:15, pakiet:/Android/i.test(navigator.userAgent) ? 20 : 0 };   // 0 = cała ramka w jednym zapisie
-let bloki = [], ust = { ...DOMYSLNE }, nrBloku = 1, usuniety = null, dokument = { h:0, px:new Uint8Array(0) };
-const obrazy = new Map();                     // src -> ImageBitmap
-const cache = new Map();                      // id  -> {klucz, wynik}
-
-const nowyTekst = () => ({ id:nrBloku++, type:'text', text:'', font:'Segoe UI', size:32, bold:false, italic:false,
-  align:'left', line:1.2, fit:false, banner:false, invert:false });
-const nowyOdstep = () => ({ id:nrBloku++, type:'space', h:32, line:'none' });
-const noweZdjecie = (src, name) => ({ id:nrBloku++, type:'image', src, name, crop:{x:0,y:0,w:1,h:1}, rot:0, mirror:false, width:100,
-  align:'center', bright:0, contrast:1.2, gamma:1.35, dither:'fs', threshold:128, cell:6, invert:false });
-
-/* ======================= RENDEROWANIE BLOKÓW ======================= */
-function platno(w, h) {
-  const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h);
-  const x = c.getContext('2d', { willReadFrequently:true }); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
-  return x;
-}
-const pomiar = platno(1, 1);
-const opisCzcionki = (b, size) => `${b.italic ? 'italic ' : ''}${b.bold ? 'bold ' : ''}${size}px "${b.font.replace(/["\\]/g, '')}", "Segoe UI", sans-serif`;
-
-function czcionkaIstnieje(nazwa) {
-  const probka = 'mmwwiillĄŻ@19', n = nazwa.replace(/["\\]/g, '');
-  return ['monospace', 'serif', 'sans-serif'].some(g => {
-    pomiar.font = `60px ${g}`; const a = pomiar.measureText(probka).width;
-    pomiar.font = `60px "${n}", ${g}`; return pomiar.measureText(probka).width !== a;
-  });
-}
-function zawin(x, tekst, max) {
-  const wynik = [];
-  for (const akapit of tekst.split('\n')) {
-    if (max === Infinity) { wynik.push(akapit); continue; }
-    let linia = '';
-    for (const kawalek of akapit.match(/\s+|\S+/g) || []) {
-      if (x.measureText(linia + kawalek).width <= max) { linia += kawalek; continue; }
-      if (/^\s/.test(kawalek)) { wynik.push(linia); linia = ''; continue; }
-      if (linia.trim()) { wynik.push(linia.trimEnd()); linia = ''; }
-      for (const znak of kawalek) {
-        if (linia && x.measureText(linia + znak).width > max) { wynik.push(linia); linia = ''; }
-        linia += znak;
-      }
-    }
-    wynik.push(linia);
-  }
-  return wynik;
-}
-function doBitow(x, prog) {
-  const { width:w, height:h } = x.canvas, d = x.getImageData(0, 0, w, h).data, px = new Uint8Array(w * h);
-  for (let i = 0; i < px.length; i++) px[i] = (d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114) < prog ? 1 : 0;
-  return px;
-}
-function rysujTekst(b) {
-  const tekst = b.text.replace(/\t/g, '    ').replace(/\s+$/, '');
-  if (!tekst.trim()) return { h:0, px:new Uint8Array(0) };
-  let size = b.size, linie;
-  const szer = ls => Math.max(1, ...ls.map(l => pomiar.measureText(l).width));
-  const bezZawijania = b.fit || b.banner;
-  if (b.banner) {
-    const n = tekst.split('\n').length, pelny = W / (n * Math.max(1.15, b.line));
-    size = Math.max(6, Math.floor(b.fit ? pelny : Math.min(size, pelny)));
-  } else if (b.fit) {
-    pomiar.font = opisCzcionki(b, 100);
-    size = Math.max(6, Math.min(600, Math.floor(100 * (W - 4) / szer(tekst.split('\n')))));
-  }
-  pomiar.font = opisCzcionki(b, size);
-  linie = zawin(pomiar, tekst, bezZawijania ? Infinity : W);
-  const m = pomiar.measureText('Ąg'), asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
-  const lh = size * b.line, zapas = Math.max(0, (asc + desc - lh) / 2);
-  const wys = Math.ceil(lh * linie.length + 2 * zapas);
-  const cw = b.banner ? Math.min(MAXH, Math.ceil(szer(linie)) + 8) : W;
-  const ch = b.banner ? W : Math.min(MAXH, wys);
-  const x = platno(cw, ch);
-  x.font = opisCzcionki(b, size); x.fillStyle = '#000'; x.textBaseline = 'alphabetic';
-  x.textAlign = b.align;
-  const px0 = b.align === 'left' ? (b.banner ? 4 : 0) : b.align === 'right' ? cw - (b.banner ? 4 : 0) : cw / 2;
-  const y0 = (b.banner ? (W - wys) / 2 : 0) + zapas + (lh - asc - desc) / 2 + asc;
-  linie.forEach((l, i) => x.fillText(l, px0, y0 + i * lh));
-  let px = doBitow(x, 150), h = ch;
-  if (b.banner) {                              // obrót o 90 stopni w prawo
-    const o = new Uint8Array(W * cw);
-    for (let y = 0; y < cw; y++) for (let k = 0; k < W; k++) o[y * W + k] = px[(W - 1 - k) * cw + y];
-    px = o; h = cw;
-  }
-  if (b.invert) for (let i = 0; i < px.length; i++) px[i] ^= 1;
-  return { h, px };
-}
-
-const BAYER = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
-               3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
-function raster(v, w, h, b) {                  // v: jasność 0..1, wynik: 1 = czarna kropka
-  const px = new Uint8Array(w * h);
-  if (b.dither === 'fs' || b.dither === 'atkinson') {
-    const a = Float32Array.from(v);
-    const wagi = b.dither === 'fs' ? [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]]
-                                   : [[1,0,1/8],[2,0,1/8],[-1,1,1/8],[0,1,1/8],[1,1,1/8],[0,2,1/8]];
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = y * w + x, czarny = a[i] < 0.5, e = a[i] - (czarny ? 0 : 1);
-      px[i] = czarny ? 1 : 0;
-      for (const [dx, dy, q] of wagi) { const nx = x + dx, ny = y + dy; if (nx >= 0 && nx < w && ny < h) a[ny * w + nx] += e * q; }
-    }
-    return px;
-  }
-  const T = Math.PI * 2 / b.cell;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const t = b.dither === 'bayer' ? (BAYER[(y & 7) * 8 + (x & 7)] + 0.5) / 64
-      : b.dither === 'dots' ? 0.5 + 0.25 * (Math.cos((x + y) * T * Math.SQRT1_2) + Math.cos((x - y) * T * Math.SQRT1_2))
-      : b.dither === 'lines' ? 0.5 + 0.5 * Math.cos(y * T)
-      : b.threshold / 255;
-    px[y * w + x] = v[y * w + x] < Math.max(t, 0.015) ? 1 : 0;   // pełna czerń bez białych prześwitów
-  }
-  return px;
-}
-function rysujZdjecie(b) {
-  const img = obrazy.get(b.src);
-  if (!img) return { h:0, px:new Uint8Array(0) };
-  const sx = b.crop.x * img.width, sy = b.crop.y * img.height;
-  const sw = Math.max(1, b.crop.w * img.width), sh = Math.max(1, b.crop.h * img.height);
-  const bok = b.rot % 180 !== 0, rw = bok ? sh : sw, rh = bok ? sw : sh;
-  const tw = Math.max(8, Math.round(W * b.width / 100)), th = Math.min(MAXH, Math.max(1, Math.round(tw * rh / rw)));
-  const x = platno(tw, th);
-  x.imageSmoothingQuality = 'high';
-  x.translate(tw / 2, th / 2);
-  if (b.mirror) x.scale(-1, 1);
-  x.rotate(b.rot * Math.PI / 180);
-  const dw = bok ? th : tw, dh = bok ? tw : th;
-  x.drawImage(img, sx, sy, sw, sh, -dw / 2, -dh / 2, dw, dh);
-  const d = x.getImageData(0, 0, tw, th).data, v = new Float32Array(tw * th);
-  for (let i = 0; i < v.length; i++) {
-    let j = (d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114) / 255;
-    j = Math.pow(j, 1 / b.gamma);
-    j = (j - 0.5) * b.contrast + 0.5 + b.bright / 200;
-    j = Math.min(1, Math.max(0, j));
-    v[i] = b.invert ? 1 - j : j;
-  }
-  const maly = raster(v, tw, th, b);
-  if (tw === W) return { h:th, px:maly };
-  const px = new Uint8Array(W * th), off = b.align === 'left' ? 0 : b.align === 'right' ? W - tw : (W - tw) >> 1;
-  for (let y = 0; y < th; y++) px.set(maly.subarray(y * tw, (y + 1) * tw), y * W + off);
-  return { h:th, px };
-}
-function rysujOdstep(b) {
-  const px = new Uint8Array(W * b.h), srodek = Math.max(0, (b.h >> 1) - 1);
-  if (b.line !== 'none') for (let y = srodek; y < Math.min(b.h, srodek + 2); y++)
-    for (let x = 0; x < W; x++) px[y * W + x] = b.line === 'solid' || x % 16 < 9 ? 1 : 0;
-  return { h:b.h, px };
-}
-function rysujBlok(b) {
-  const klucz = JSON.stringify({ ...b, src:b.src && b.src.length }) + (b.src ? obrazy.has(b.src) : '');
-  const c = cache.get(b.id);
-  if (c && c.klucz === klucz) return c.wynik;
-  const wynik = b.type === 'text' ? rysujTekst(b) : b.type === 'image' ? rysujZdjecie(b) : rysujOdstep(b);
-  cache.set(b.id, { klucz, wynik });
-  return wynik;
-}
-function zloz(czesci) {
-  const h = czesci.reduce((s, c) => s + c.h, 0), px = new Uint8Array(W * h);
-  let y = 0; for (const c of czesci) { px.set(c.px, y * W); y += c.h; }
-  return { h, px };
-}
-/* ======================= PODGLĄD ======================= */
-let zaplanowane = 0;
-function odswiez() { if (!zaplanowane) zaplanowane = requestAnimationFrame(() => { zaplanowane = 0; odswiezTeraz(); }); zapisz(); }
-function odswiezTeraz() {
-  dokument = zloz(bloki.map(rysujBlok));
-  const c = $('plotno'), h = Math.min(dokument.h, MAXH);
-  c.width = W; c.height = Math.max(1, h);
-  if (h) {
-    const x = c.getContext('2d'), im = x.createImageData(W, h);
-    for (let i = 0; i < W * h; i++) if (dokument.px[i]) { im.data[i*4] = 28; im.data[i*4+1] = 28; im.data[i*4+2] = 40; im.data[i*4+3] = 255; }
-    x.putImageData(im, 0, 0);
-  }
-  $('dlugosc').textContent = h ? `ok. ${(dokument.h / PUNKTY_NA_CM).toFixed(1).replace('.', ',')} cm` : 'pusto';
-  stanPrzyciskow();
-}
-
-/* ======================= EDYTOR ======================= */
-const esc = s => String(s).replace(/[&<>"']/g, z => '&#' + z.charCodeAt(0) + ';');
-const opcje = (lista, w) => lista.map(([v, t]) => `<option value="${esc(v)}"${v === w ? ' selected' : ''}>${esc(t)}</option>`).join('');
-const suwak = (b, k, t, min, max, step) => `<label><span class="etykieta">${t}<output data-o="${k}">${fmt(b[k])}</output></span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${b[k]}"></label>`;
-const ptaszek = (b, k, t) => `<label><input type="checkbox" data-k="${k}"${b[k] ? ' checked' : ''}> ${t}</label>`;
-const wybor = (b, k, t, lista) => `<label><span class="etykieta">${t}</span><select data-k="${k}">${opcje(lista, b[k])}</select></label>`;
-const fmt = v => String(Math.round(v * 100) / 100).replace('.', ',');
-const WYROWNANIE = [['left','Do lewej'],['center','Do środka'],['right','Do prawej']];
-
-function htmlBloku(b, i) {
-  const nazwa = b.type === 'text' ? 'Tekst' : b.type === 'image' ? `Zdjęcie: ${esc(b.name)}` : 'Odstęp';
-  let w = `<div class="blok-glowa"><h2>${nazwa}</h2>
-    <button data-akcja="gora" aria-label="Przesuń wyżej" title="Przesuń wyżej"${i ? '' : ' disabled'}>↑</button>
-    <button data-akcja="dol" aria-label="Przesuń niżej" title="Przesuń niżej"${i < bloki.length - 1 ? '' : ' disabled'}>↓</button>
-    <button data-akcja="kopia" aria-label="Powiel blok" title="Powiel">⧉</button>
-    <button data-akcja="usun" aria-label="Usuń blok" title="Usuń">✕</button></div>`;
-  if (b.type === 'text') {
-    const znana = CZCIONKI.includes(b.font);
-    w += `<textarea data-k="text" rows="4" aria-label="Treść tekstu" placeholder="Wpisz tekst do wydrukowania">${'\n' + esc(b.text)}</textarea>
-      <div class="siatka">
-        <label><span class="etykieta">Czcionka</span><select data-font>${opcje([...CZCIONKI.map(f => [f, f]), ['__inna','Inna (wpisz nazwę)'], ...('queryLocalFonts' in window ? [['__wczytaj','Wczytaj z komputera…']] : [])], znana ? b.font : '__inna')}</select></label>
-        <label data-inna${znana ? ' hidden' : ''}><span class="etykieta">Nazwa czcionki</span><input type="text" data-k="font" value="${esc(b.font)}"><span class="podp zle" data-brak hidden>Nie ma takiej czcionki na tym urządzeniu</span></label>
-        ${suwak(b, 'size', 'Rozmiar', 10, 300, 1)}
-        ${suwak(b, 'line', 'Odstęp linii', 0.7, 2.5, 0.05)}
-        ${wybor(b, 'align', 'Wyrównanie', WYROWNANIE)}
       </div>
-      <div class="znaczniki">${ptaszek(b, 'bold', 'Pogrubienie')}${ptaszek(b, 'italic', 'Kursywa')}${ptaszek(b, 'fit', 'Dopasuj do szerokości')}${ptaszek(b, 'banner', 'Baner (obrót o 90°)')}${ptaszek(b, 'invert', 'Białe na czarnym')}</div>`;
-  } else if (b.type === 'image') {
-    w += `<details data-kadruj><summary>Kadruj</summary><canvas class="kadr" width="10" height="10" aria-label="Zaznacz kadr myszą lub palcem"></canvas>
-        <p class="podp">Przeciągnij po zdjęciu, żeby zaznaczyć fragment.</p><div class="przyciski"><button data-akcja="cale">Całe zdjęcie</button></div></details>
-      <div class="siatka">
-        ${wybor(b, 'dither', 'Raster', [['fs','Floyd–Steinberg (zdjęcia)'],['atkinson','Atkinson (jaśniejszy)'],['bayer','Bayer (regularny wzór)'],['dots','Kropki jak w gazecie'],['lines','Poziome linie'],['prog','Bez rastra (rysunki, QR)']])}
-        <span data-dla="prog">${suwak(b, 'threshold', 'Próg czerni', 1, 254, 1)}</span>
-        <span data-dla="dots lines">${suwak(b, 'cell', 'Wielkość rastra', 3, 24, 1)}</span>
-        ${suwak(b, 'bright', 'Jasność', -100, 100, 1)}
-        ${suwak(b, 'contrast', 'Kontrast', 0.2, 3, 0.05)}
-        ${suwak(b, 'gamma', 'Rozjaśnienie cieni (gamma)', 0.4, 2.5, 0.05)}
-        ${suwak(b, 'width', 'Szerokość, %', 10, 100, 1)}
-        ${wybor(b, 'align', 'Położenie', WYROWNANIE)}
+      <div class="widok" data-widok="druk" hidden>
+        <div class="stepper">
+          <span>Długość <strong id="dlugosc"></strong></span>
+          <span class="kopie"><button id="mniej" aria-label="Mniej kopii">−</button><output id="o-copies" aria-label="Liczba kopii"></output><button id="wiecej" aria-label="Więcej kopii">+</button></span>
+        </div>
+        <div class="rzad" role="group" aria-label="Moc druku"><button data-moc="12000">Jaśniej</button><button data-moc="16000">Normalnie</button><button data-moc="20000">Ciemniej</button></div>
+        <label><span class="etykieta">Moc dokładnie <output id="o-energy"></output></span>
+          <input type="range" data-s="energy" min="4000" max="40000" step="500"></label>
+        <progress id="postep" max="1" value="0" hidden aria-label="Postęp wysyłania"></progress>
+        <div class="rzad"><button class="glowny" id="drukuj">Drukuj teraz</button><button id="stop" hidden>Stop</button></div>
       </div>
-      <div class="znaczniki">${ptaszek(b, 'mirror', 'Odbicie lustrzane')}${ptaszek(b, 'invert', 'Negatyw')}</div>
-      <div class="przyciski"><button data-akcja="obrot">Obróć o 90°</button></div>`;
-  } else {
-    w += `<div class="siatka" style="margin-top:0">${suwak(b, 'h', 'Wysokość w punktach', 2, 400, 2)}${wybor(b, 'line', 'Linia', [['none','Brak'],['solid','Ciągła'],['dashed','Przerywana']])}</div>`;
-  }
-  return `<article class="karta" data-id="${b.id}">${w}</article>`;
-}
-function pokazBloki() {
-  const otwarte = new Set([...document.querySelectorAll('[data-kadruj][open]')].map(e => +e.closest('[data-id]').dataset.id));
-  $('bloki').innerHTML = bloki.length ? bloki.map(htmlBloku).join('')
-    : '<div class="pusto">Dodaj tekst albo zdjęcie. Zdjęcia możesz też przeciągnąć na stronę lub wkleić (Ctrl+V).</div>';
-  for (const b of bloki) {
-    if (b.type !== 'image') continue;
-    const el = elBloku(b.id);
-    zaleznePola(b, el);
-    if (otwarte.has(b.id)) el.querySelector('[data-kadruj]').open = true;
-    rysujKadr(b);
-  }
-  odswiez();
-}
-const elBloku = id => document.querySelector(`[data-id="${id}"]`);
-const blokOd = el => { const a = el.closest('[data-id]'); return a && bloki.find(b => b.id === +a.dataset.id); };
-function zaleznePola(b, el) { el.querySelectorAll('[data-dla]').forEach(s => { s.hidden = !s.dataset.dla.split(' ').includes(b.dither); }); }
+    </section>
+    <nav role="tablist" aria-label="Narzędzia">
+      <button role="tab" data-zakladka="tresc"><svg><use href="#i-tresc"/></svg>Treść</button>
+      <button role="tab" data-zakladka="wyglad"><svg><use href="#i-wyglad"/></svg>Wygląd</button>
+      <button role="tab" data-zakladka="ust"><svg><use href="#i-ust"/></svg>Ustawienia</button>
+      <button role="tab" data-zakladka="druk" class="glowny" id="nav-druk">Drukuj</button>
+    </nav>
+  </div>
+</div>
 
-$('bloki').addEventListener('input', e => {
-  const b = blokOd(e.target); if (!b) return;
-  const el = elBloku(b.id), k = e.target.dataset.k;
-  if (e.target.matches('[data-font]')) { wybranoCzcionke(b, el, e.target); return; }
-  if (!k) return;
-  b[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'range' ? +e.target.value : e.target.value;
-  const o = el.querySelector(`[data-o="${k}"]`); if (o) o.textContent = fmt(b[k]);
-  if (k === 'dither') zaleznePola(b, el);
-  if (k === 'font') el.querySelector('[data-brak]').hidden = !b.font.trim() || czcionkaIstnieje(b.font);
-  odswiez();
-});
-async function wybranoCzcionke(b, el, sel) {
-  if (sel.value === '__inna') { el.querySelector('[data-inna]').hidden = false; el.querySelector('[data-inna] input').focus(); return; }
-  if (sel.value === '__wczytaj') {
-    try {
-      const nazwy = [...new Set((await queryLocalFonts()).map(f => f.family))].sort((x, y) => x.localeCompare(y, 'pl'));
-      if (nazwy.length) CZCIONKI.splice(0, CZCIONKI.length, ...nazwy);
-      powiedz(nazwy.length ? `Wczytano czcionki: ${nazwy.length}.` : 'Przeglądarka nie udostępniła listy czcionek. Użyj opcji "Inna (wpisz nazwę)".');
-    } catch { powiedz('Nie udało się wczytać listy czcionek. Użyj opcji "Inna (wpisz nazwę)".', 'blad'); }
-    pokazBloki(); return;
-  }
-  b.font = sel.value; el.querySelector('[data-inna]').hidden = true; el.querySelector('[data-k=font]').value = b.font; odswiez();
-}
-$('bloki').addEventListener('click', e => {
-  const akcja = e.target.dataset.akcja, b = akcja && blokOd(e.target); if (!b) return;
-  const i = bloki.indexOf(b);
-  if (akcja === 'gora' && i) [bloki[i-1], bloki[i]] = [b, bloki[i-1]];
-  if (akcja === 'dol' && i < bloki.length - 1) [bloki[i+1], bloki[i]] = [b, bloki[i+1]];
-  if (akcja === 'kopia') bloki.splice(i + 1, 0, { ...structuredClone(b), id:nrBloku++ });
-  if (akcja === 'usun') { bloki.splice(i, 1); cache.delete(b.id); usuniety = { b, i }; dymek('Usunięto blok.'); }
-  if (akcja === 'obrot') { b.rot = (b.rot + 90) % 360; odswiez(); return; }
-  if (akcja === 'cale') { b.crop = { x:0, y:0, w:1, h:1 }; rysujKadr(b); odswiez(); return; }
-  pokazBloki();
-  const el = elBloku(b.id), p = el && el.querySelector(`[data-akcja="${akcja}"]`);
-  if (p && !p.disabled) p.focus();
-});
-document.querySelectorAll('[data-dodaj]').forEach(p => p.addEventListener('click', () => {
-  if (p.dataset.dodaj === 'image') { $('plik').click(); return; }
-  const b = p.dataset.dodaj === 'text' ? nowyTekst() : nowyOdstep();
-  bloki.push(b); pokazBloki();
-  const el = elBloku(b.id); el.scrollIntoView({ block:'nearest' });
-  if (b.type === 'text') el.querySelector('textarea').focus();
-}));
-let dymekT = 0;
-function dymek(t) { $('dymek-tekst').textContent = t; $('dymek').hidden = false; clearTimeout(dymekT); dymekT = setTimeout(() => { $('dymek').hidden = true; }, 8000); }
-$('cofnij').addEventListener('click', () => { if (usuniety) { bloki.splice(usuniety.i, 0, usuniety.b); usuniety = null; pokazBloki(); } $('dymek').hidden = true; });
+<div id="kadrowanie" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
+  <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
+  <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
+  <div class="rzad"><button id="kadr-anuluj">Anuluj</button><button id="kadr-cale">Całe zdjęcie</button><button class="glowny" id="kadr-ok">Gotowe</button></div>
+</div>
 
-/* ======================= ZDJĘCIA ======================= */
-async function wczytajSrc(src) {
-  if (!obrazy.has(src)) obrazy.set(src, await createImageBitmap(await (await fetch(src)).blob()));
-}
-async function dodajPliki(pliki) {
-  for (const f of pliki) {
-    try {
-      const bmp = await createImageBitmap(f, { imageOrientation:'from-image' });
-      const skala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-      const x = platno(Math.round(bmp.width * skala), Math.round(bmp.height * skala));
-      x.imageSmoothingQuality = 'high'; x.drawImage(bmp, 0, 0, x.canvas.width, x.canvas.height);
-      const src = x.canvas.toDataURL('image/jpeg', 0.9);
-      obrazy.set(src, await createImageBitmap(x.canvas));
-      bloki.push(noweZdjecie(src, f.name || 'wklejone')); pokazBloki();
-    } catch { powiedz(`Nie udało się odczytać pliku "${f.name}". Przeglądarka obsługuje m.in. JPG, PNG, WebP i GIF.`, 'blad'); }
-  }
-}
-$('plik').addEventListener('change', e => { dodajPliki([...e.target.files]); e.target.value = ''; });
-document.addEventListener('paste', e => { const p = [...e.clipboardData.files].filter(f => f.type.startsWith('image/')); if (p.length) { e.preventDefault(); dodajPliki(p); } });
-document.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); document.body.classList.add('upuszczanie'); } });
-document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('upuszczanie'); });
-document.addEventListener('drop', e => { document.body.classList.remove('upuszczanie'); if (e.dataTransfer.files.length) { e.preventDefault(); dodajPliki([...e.dataTransfer.files]); } });
+<div id="dymek" hidden role="status"><span id="dymek-tekst"></span><button id="dymek-cofnij">Cofnij</button></div>
+<input type="file" id="plik" accept="image/*" multiple hidden>
+<input type="file" id="aparat" accept="image/*" capture="environment" hidden>
 
-function rysujKadr(b) {
-  const el = elBloku(b.id), c = el && el.querySelector('.kadr'), img = obrazy.get(b.src); if (!c || !img) return;
-  const s = Math.min(1, 420 / img.width, 420 / img.height);
-  c.width = Math.max(1, Math.round(img.width * s)); c.height = Math.max(1, Math.round(img.height * s));
-  const x = c.getContext('2d'), k = b.crop, r = [k.x * c.width, k.y * c.height, k.w * c.width, k.h * c.height];
-  x.drawImage(img, 0, 0, c.width, c.height);
-  x.fillStyle = 'rgba(0,0,0,.55)'; x.beginPath(); x.rect(0, 0, c.width, c.height); x.rect(...r); x.fill('evenodd');
-  x.strokeStyle = '#fff'; x.lineWidth = 2; x.strokeRect(...r);
-}
-let kadr = null;
-const punkt = (e, c) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height].map(v => Math.min(1, Math.max(0, v))); };
-$('bloki').addEventListener('pointerdown', e => {
-  if (!e.target.matches('.kadr')) return;
-  const b = blokOd(e.target); e.target.setPointerCapture(e.pointerId);
-  kadr = { b, c:e.target, p:punkt(e, e.target), przed:{ ...b.crop } };
-});
-$('bloki').addEventListener('pointermove', e => {
-  if (!kadr) return;
-  const [x, y] = punkt(e, kadr.c), [px, py] = kadr.p;
-  kadr.b.crop = { x:Math.min(x, px), y:Math.min(y, py), w:Math.abs(x - px), h:Math.abs(y - py) }; rysujKadr(kadr.b);
-});
-for (const t of ['pointerup', 'pointercancel']) $('bloki').addEventListener(t, () => {
-  if (!kadr) return;
-  const { b, przed } = kadr; kadr = null;
-  if (b.crop.w < 0.02 || b.crop.h < 0.02) b.crop = przed;   // zwykłe kliknięcie nie zmienia kadru
-  rysujKadr(b); odswiez();
-});
-
-/* ======================= ZAPIS LOKALNY ======================= */
-let zapisT = 0;
-function zapisz() {
-  clearTimeout(zapisT);
-  zapisT = setTimeout(() => {
-    try { localStorage.setItem(KLUCZ, JSON.stringify({ bloki, ust })); }
-    catch {
-      try { localStorage.setItem(KLUCZ, JSON.stringify({ bloki:bloki.filter(b => b.type !== 'image'), ust })); } catch {}
-      powiedz('Za dużo zdjęć, żeby je zapamiętać po zamknięciu strony. Drukować można normalnie.');
-    }
-  }, 500);
-}
-async function odczytaj() {
-  try {
-    const z = JSON.parse(localStorage.getItem(KLUCZ) || 'null');
-    if (z) {
-      ust = { ...DOMYSLNE, ...z.ust };
-      for (const b of z.bloki) {
-        if (b.type === 'image') { try { await wczytajSrc(b.src); } catch { continue; } }
-        bloki.push({ ...b, id:nrBloku++ });
-      }
-      return;
-    }
-  } catch {}
-  bloki.push(nowyTekst());
-}
-
-/* ======================= PROTOKÓŁ DRUKARKI ======================= */
-function crc8(dane) { let c = 0; for (const b of dane) { c ^= b; for (let i = 0; i < 8; i++) c = c & 0x80 ? ((c << 1) ^ 0x07) & 0xff : (c << 1) & 0xff; } return c; }
-function ramka(cmd, dane) {
-  return Uint8Array.from([0x51, 0x78, cmd, 0x00, dane.length & 0xff, dane.length >> 8, ...dane, crc8(dane), 0xff]);
-}
-function linia(px, y) {                        // 48 bajtów, najmłodszy bit = lewy punkt
-  const b = new Uint8Array(WB);
-  for (let x = 0; x < W; x++) if (px[y * W + x]) b[x >> 3] |= 1 << (x & 7);
-  return b;
-}
-const POCZATEK = [0xaa,0x55,0x17,0x38,0x44,0x5f,0x5f,0x5f,0x44,0x38,0x2c];
-const KONIEC   = [0xaa,0x55,0x17,0,0,0,0,0,0,0,0x17];
-const PUSTA = new Uint8Array(WB);
-
-function* ramkiZadania(z) {                    // z: {px, h, energy, feed}
-  yield ramka(0xa3, [0]); yield ramka(0xa4, [50]); yield ramka(0xbd, [ust.speed]);
-  yield ramka(0xaf, [z.energy & 0xff, z.energy >> 8]); yield ramka(0xbe, [1]); yield ramka(0xa9, [0]);
-  yield ramka(0xa6, POCZATEK);
-  for (let y = 0; y < z.h; y++) yield ramka(0xa2, linia(z.px, y));
-  yield* ramkiKonca(z.feed);
-}
-function* ramkiKonca(feed) {
-  yield ramka(0xa6, KONIEC); yield ramka(0xbd, [8]);
-  if (feed && ust.feedMode === 'cmd') yield ramka(0xa1, [feed & 0xff, feed >> 8]);
-  else for (let i = 0; i < feed; i++) yield ramka(0xa2, PUSTA);
-  yield ramka(0xa3, [0]);
-}
-
-/* Zegar w osobnym wątku: karta w tle spowalnia zwykłe zegary do 1 s, co przerywałoby druk. */
-const czekaj = (() => {
-  const oczek = new Map(); let nr = 0, w = null;
-  const gotowe = id => { const o = oczek.get(id); if (o) { oczek.delete(id); clearTimeout(o.t); o.ok(); } };
-  try {
-    w = new Worker(URL.createObjectURL(new Blob(['onmessage=e=>setTimeout(()=>postMessage(e.data[0]),e.data[1])'])));
-    w.onmessage = e => gotowe(e.data); w.onerror = () => { w = null; };
-  } catch { w = null; }
-  return ms => new Promise(ok => {
-    const id = ++nr; oczek.set(id, { ok, t:setTimeout(gotowe, w ? ms + 1500 : ms, id) });
-    if (w) w.postMessage([id, ms]);
-  });
-})();
-
-/* ======================= POŁĄCZENIE BLUETOOTH ======================= */
-const USLUGA = 0xae30, ZAPIS = 0xae01, ODBIOR = 0xae02;
-const dr = { urz:null, tx:null, pauza:false, laczenie:null, stan:0 };
-let drukuje = false, przerwij = false, pakiet = 0;   // pakiet: wielkość paczki bieżącego zadania, 0 = cała ramka
-class Przerwano extends Error {}
-
-const hex = d => [...d].map(b => b.toString(16).padStart(2, '0')).join(' ');
-const wpisy = [];
-function log(t) { wpisy.push(`${new Date().toLocaleTimeString('pl')} ${t}`); if (wpisy.length > 80) wpisy.shift(); $('dziennik').textContent = wpisy.join('\n'); }
-const polaczona = () => !!(dr.tx && dr.urz && dr.urz.gatt.connected);
-
-async function wybierz(wszystkie) {
-  if (!navigator.bluetooth) throw new Error('Ta przeglądarka nie obsługuje Bluetooth. Użyj Chrome lub Edge.');
-  if (!(await navigator.bluetooth.getAvailability())) throw new Error('Bluetooth jest wyłączony. Włącz go w ustawieniach systemu i spróbuj ponownie.');
-  const dodatkowe = [USLUGA, 0xaf30];
-  const u = await navigator.bluetooth.requestDevice(wszystkie ? { acceptAllDevices:true, optionalServices:dodatkowe }
-    : { filters:[{ namePrefix:'MX' }], optionalServices:dodatkowe });
-  u.addEventListener('gattserverdisconnected', () => { if (u !== dr.urz) return; dr.tx = null; dr.pauza = false; log('Rozłączono'); stanPrzyciskow(); });
-  if (dr.urz && dr.urz !== u && dr.urz.gatt.connected) dr.urz.gatt.disconnect();
-  dr.urz = u; dr.tx = null; log(`Wybrano: ${u.name || 'bez nazwy'}`);
-}
-function polacz(wszystkie = false) {
-  if (!dr.laczenie) dr.laczenie = laczenie(wszystkie).finally(() => { dr.laczenie = null; stanPrzyciskow(); });
-  stanPrzyciskow();
-  return dr.laczenie;
-}
-async function laczenie(wszystkie) {
-  if (wszystkie || !dr.urz) await wybierz(wszystkie);
-  let blad;
-  for (let proba = 1; proba <= 3; proba++) {
-    try {
-      const serwer = await dr.urz.gatt.connect();
-      const usluga = await serwer.getPrimaryService(USLUGA);
-      const tx = await usluga.getCharacteristic(ZAPIS);
-      log(`ae01: ${['write', 'writeWithoutResponse'].filter(p => tx.properties[p]).join(', ')}`);
-      dr.pauza = false; dr.stan = 0;
-      try {
-        const rx = await usluga.getCharacteristic(ODBIOR);
-        rx.addEventListener('characteristicvaluechanged', e => odebrano(new Uint8Array(e.target.value.buffer, e.target.value.byteOffset, e.target.value.byteLength)));
-        await rx.startNotifications();
-      } catch (e) { log(`Brak sygnałów zwrotnych (ae02): ${e.message}`); }
-      dr.tx = tx; log('Połączono');
-      return;
-    } catch (e) { blad = e; log(`Próba ${proba}: ${e.message}`); await czekaj(600); }
-  }
-  dr.urz = null;                               // następnym razem znów pokaż listę
-  throw new Error('Nie udało się połączyć. Sprawdź, czy drukarka jest włączona i nie trzyma jej telefon (aplikacja Fun Print), potem spróbuj ponownie. Szczegół: ' + blad.message);
-}
-function odebrano(d) {
-  log(`odbiór: ${hex(d)}`);
-  if (d.length < 7 || d[0] !== 0x51 || d[1] !== 0x78) return;
-  if (d[2] === 0xae) dr.pauza = d[6] === 0x10;
-  if (d[2] === 0xa3) dr.stan = d[6];
-}
-function ostrzezenia() {
-  return [[1, 'brak papieru'], [2, 'otwarta klapka'], [4, 'przegrzana głowica'], [8, 'słaba bateria']].filter(([m]) => dr.stan & m).map(([, t]) => t).join(', ');
-}
-async function wyslij(bajty) {
-  let czekano = 0;
-  while (dr.pauza && polaczona()) {
-    if (przerwij) throw new Przerwano();
-    if (!czekano) powiedz('Drukarka prosi o chwilę przerwy…');
-    await czekaj(50); czekano += 50;
-    if (czekano > 60000) throw new Error('Drukarka od minuty nie przyjmuje danych. Wyłącz ją i włącz ponownie.');
-  }
-  if (!polaczona()) throw new Error('Drukarka się rozłączyła.');
-  const krok = pakiet || bajty.length;
-  for (let i = 0; i < bajty.length; i += krok) {
-    const kawalek = bajty.slice(i, i + krok);
-    if (dr.tx.properties.writeWithoutResponse) await dr.tx.writeValueWithoutResponse(kawalek);
-    else await dr.tx.writeValueWithResponse(kawalek);
-  }
-  await czekaj(ust.delay);
-}
-async function drukujZadania(zadania, opis) {
-  if (drukuje) return;
-  drukuje = true; przerwij = false; stanPrzyciskow();
-  const ile = zadania.reduce((s, z) => s + z.h + 10 + (ust.feedMode === 'lines' ? z.feed : 1), 0);
-  let n = 0, blokada = null;
-  try {
-    if (!polaczona()) { powiedz('Łączę z drukarką…'); await polacz(); }
-    try { blokada = await navigator.wakeLock.request('screen'); } catch {}
-    powiedz(opis);
-    for (const z of zadania) {
-      pakiet = z.pakiet ?? ust.pakiet;
-      const start = performance.now(), n0 = n;
-      for (const r of ramkiZadania(z)) {
-        if (przerwij) throw new Przerwano();
-        await wyslij(r);
-        $('postep').value = ++n / ile;
-        if (n % 16 === 0) powiedz(`${opis} ${Math.min(99, Math.round(100 * n / ile))}%`);
-      }
-      log(`Zadanie: ${n - n0} ramek, paczka ${pakiet || 'cała'}, ${((performance.now() - start) / (n - n0)).toFixed(1)} ms na ramkę`);
-    }
-    await czekaj(400);
-    const o = ostrzezenia();
-    powiedz(o ? `Wysłano, ale drukarka zgłasza: ${o}.` : 'Wysłano całość do drukarki.', o ? 'blad' : 'dobrze');
-    log(`Wysłano ramek: ${n}`);
-  } catch (e) {
-    if (e instanceof Przerwano) {
-      dr.pauza = false;
-      try { przerwij = false; for (const r of ramkiKonca(40)) await wyslij(r); } catch {}
-      powiedz('Zatrzymano drukowanie.');
-    } else {
-      log(`Błąd: ${e.name} ${e.message}`);
-      const o = ostrzezenia();
-      powiedz(e.name === 'NotFoundError' ? 'Nie wybrano drukarki.' : e.message + (n ? ` Wysłano ${Math.round(100 * n / ile)}% wydruku.` : '') + (o ? ` Zgłoszenie drukarki: ${o}.` : ''), 'blad');
-    }
-  } finally {
-    drukuje = false; $('postep').value = 0; stanPrzyciskow();
-    if (blokada) blokada.release().catch(() => {});
-  }
-}
-
-/* ======================= PASEK TESTOWY ======================= */
-const MOCE_TESTU = [8000, 12000, 16000, 20000, 26000, 32000];
-function wzorTestowy(moc, tytul = `Moc ${moc}`) {
-  const t = rysujTekst({ ...nowyTekst(), text:tytul, size:34, bold:true, line:1.1 });
-  const m = rysujTekst({ ...nowyTekst(), text:'Zażółć gęślą jaźń 0123456789', size:20, line:1.2 });
-  const v = new Float32Array(W * 48); for (let y = 0; y < 48; y++) for (let x = 0; x < W; x++) v[y * W + x] = x / (W - 1);
-  const klin = { h:48, px:raster(v, W, 48, { dither:'fs' }) };
-  const kreski = { h:16, px:new Uint8Array(W * 16) };
-  for (let y = 0; y < 16; y++) for (let x = 0; x < W; x++) kreski.px[y * W + x] = x < W / 3 ? x & 1 : x < 2 * W / 3 ? (x >> 1) & 1 : (x >> 2) & 1;
-  return zloz([t, m, klin, rysujOdstep({ h:6, line:'none' }), kreski]);
-}
-
-/* ======================= OBSŁUGA PRZYCISKÓW ======================= */
-function powiedz(t, klasa = '') { const k = $('komunikat'); k.textContent = t; k.className = klasa; }
-function stanPrzyciskow() {
-  const s = $('stan'), jest = polaczona();
-  s.textContent = dr.laczenie ? 'Łączę…' : jest ? `Połączona: ${dr.urz.name || 'drukarka'}` : 'Niepołączona';
-  s.className = dr.laczenie ? 'trwa' : jest ? 'jest' : '';
-  $('polacz').textContent = jest ? 'Rozłącz' : 'Połącz z drukarką';
-  const bt = !!navigator.bluetooth, zajete = drukuje || !!dr.laczenie, zaDlugie = dokument.h > MAXH;
-  $('polacz').disabled = !bt || zajete;
-  $('drukuj').disabled = !bt || zajete || !dokument.h || zaDlugie;
-  $('drukuj').textContent = zaDlugie ? 'Wydruk za długi (ponad 3,7 m)' : 'Drukuj';
-  for (const id of ['wysun', 'test', 'testTel', 'inne']) $(id).disabled = !bt || zajete;
-  $('stop').hidden = $('postep').hidden = !drukuje;
-}
-const nazwijBlad = e => powiedz(e.name === 'NotFoundError' ? 'Nie wybrano drukarki.' : e.message, 'blad');
-$('polacz').addEventListener('click', async () => {
-  if (polaczona()) { dr.urz.gatt.disconnect(); dr.tx = null; powiedz('Rozłączono.'); stanPrzyciskow(); return; }
-  try { await polacz(); powiedz('Połączono z drukarką.', 'dobrze'); } catch (e) { nazwijBlad(e); }
-});
-$('inne').addEventListener('click', async () => { try { await polacz(true); powiedz('Połączono z drukarką.', 'dobrze'); } catch (e) { nazwijBlad(e); } });
-$('drukuj').addEventListener('click', () => {
-  odswiezTeraz();
-  drukujZadania(Array.from({ length:ust.copies }, () => ({ ...dokument, energy:ust.energy, feed:ust.feed })), 'Drukuję…');
-});
-$('test').addEventListener('click', () => drukujZadania(MOCE_TESTU.map((m, i) => ({ ...wzorTestowy(m), energy:m, feed:i === MOCE_TESTU.length - 1 ? ust.feed : 16 })), 'Drukuję pasek testowy…'));
-$('testTel').addEventListener('click', () => {
-  log(`Wersja: ${WERSJA}. Przeglądarka: ${navigator.userAgent}`);
-  const z = (tytul, pakiet, feed) => ({ ...wzorTestowy(0, tytul), energy:ust.energy, feed, pakiet });
-  drukujZadania([z('A: po 20 bajtów', 20, 60), z('B: cała linia', 0, ust.feed)], 'Drukuję test telefonu…');
-});
-$('wysun').addEventListener('click', () => drukujZadania([{ px:new Uint8Array(0), h:0, energy:ust.energy, feed:Math.max(80, ust.feed) }], 'Wysuwam papier…'));
-$('stop').addEventListener('click', () => { przerwij = true; });
-$('kopiuj').addEventListener('click', async () => { try { await navigator.clipboard.writeText(wpisy.join('\n')); powiedz('Skopiowano dziennik.'); } catch { powiedz('Zaznacz dziennik myszą i skopiuj (Ctrl+C).'); } });
-$('zoom').addEventListener('click', e => { const d = $('tasma').classList.toggle('x2'); e.target.setAttribute('aria-pressed', d); e.target.textContent = d ? 'Pokaż 1:1' : 'Powiększ 2×'; });
-
-function pokazUst() {
-  document.querySelectorAll('[data-s]').forEach(el => { el.value = ust[el.dataset.s]; });
-  $('o-energy').textContent = ust.energy;
-  $('o-feed').textContent = `${(ust.feed / PUNKTY_NA_CM).toFixed(1).replace('.', ',')} cm`;
-  $('o-delay').textContent = `${ust.delay} ms`;
-}
-document.querySelectorAll('[data-s]').forEach(el => el.addEventListener('change', () => {
-  const k = el.dataset.s;
-  if (k === 'feedMode') ust[k] = el.value;
-  else if (k === 'copies') ust[k] = Math.min(50, Math.max(1, Math.round(+el.value) || 1));
-  else ust[k] = +el.value;
-  pokazUst(); zapisz();
-}));
-document.querySelectorAll('input[type=range][data-s]').forEach(el => el.addEventListener('input', () => { ust[el.dataset.s] = +el.value; pokazUst(); }));
-addEventListener('beforeunload', e => { if (drukuje) e.preventDefault(); });
-
-/* ======================= INSTALACJA I PRACA BEZ INTERNETU ======================= */
-let zaproszenie = null;
-addEventListener('beforeinstallprompt', e => { e.preventDefault(); zaproszenie = e; $('instaluj').hidden = false; });
-addEventListener('appinstalled', () => { zaproszenie = null; $('instaluj').hidden = true; });
-$('instaluj').addEventListener('click', async () => {
-  if (!zaproszenie) return;
-  zaproszenie.prompt(); await zaproszenie.userChoice;
-  zaproszenie = null; $('instaluj').hidden = true;
-});
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(e => log(`Praca bez internetu niedostępna: ${e.message}`));
-
-(async () => {
-  $('wersja').textContent = `Wersja: ${WERSJA}`;
-  $('brak').hidden = !!navigator.bluetooth;
-  await odczytaj();
-  pokazUst(); pokazBloki();
-})();
-</script>
+<script src="rdzen.js"></script>
+<script src="drukarka.js"></script>
+<script src="ekran.js"></script>
 </body>
 </html>
