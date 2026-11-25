@@ -19,6 +19,9 @@
     <symbol id="i-tekst" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
     <symbol id="i-zdjecie" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5"/><circle cx="15.5" cy="9" r="1.5"/></symbol>
     <symbol id="i-aparat" viewBox="0 0 24 24"><path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+    <symbol id="i-zamien" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></symbol>
+    <symbol id="i-lampa" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
     <symbol id="i-odstep" viewBox="0 0 24 24"><path d="M4 12h16M12 3v5M9.5 5.5 12 3l2.5 2.5M12 21v-5M9.5 18.5 12 21l2.5-2.5"/></symbol>
     <symbol id="i-tresc" viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19zM13 7l4 4"/></symbol>
     <symbol id="i-wyglad" viewBox="0 0 24 24"><path d="M4 7h8M18 7h2M4 17h2M12 17h8"/><circle cx="15" cy="7" r="2.5"/><circle cx="9" cy="17" r="2.5"/></symbol>
@@ -38,6 +41,7 @@
     <div id="tasma" hidden><canvas id="plotno" width="384" height="1" role="img" aria-label="Podgląd kropek na papierze"></canvas><div id="ramka" hidden></div></div>
     <div id="pusto">
       <p>Tu zobaczysz swój wydruk.</p>
+      <div class="rzad"><button class="glowny" data-dodaj="aparat"><svg><use href="#i-aparat"/></svg>Zrób zdjęcie</button></div>
       <div class="rzad"><button data-dodaj="text"><svg><use href="#i-tekst"/></svg>Wpisz tekst</button><button data-dodaj="galeria"><svg><use href="#i-zdjecie"/></svg>Dodaj zdjęcie</button></div>
     </div>
   </main>
@@ -66,7 +70,7 @@
             <label><span class="etykieta">Sposób wysuwu</span>
               <select data-s="feedMode"><option value="lines">Puste linie</option><option value="cmd">Komenda A1</option></select></label>
             <label><span class="etykieta">Wielkość paczki Bluetooth</span>
-              <select data-s="pakiet"><option value="20">Po 20 bajtów (bezpieczniej)</option><option value="0">Cała linia naraz</option></select></label>
+              <select data-s="pakiet"><option value="0">Cała linia naraz</option><option value="20">Po 20 bajtów (gdy wydruk jest zepsuty)</option></select></label>
           </div>
           <div class="rzad"><button id="testTel">Test telefonu</button><button id="inne">Szukaj wszystkich urządzeń</button></div>
         </details>
@@ -98,7 +102,31 @@
   </div>
 </div>
 
-<div id="kadrowanie" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
+<div id="foto" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Aparat">
+  <div class="foto-gora"><button class="ikona" id="ap-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><button id="ap-telefon">Aparat telefonu</button></div>
+  <div class="foto-srodek" id="ap-zywo">
+    <div class="kadr-pole">
+      <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
+      <div id="ap-info" role="status" hidden><p id="ap-info-tekst"></p><button id="ap-telefon2" hidden>Użyj aparatu telefonu</button></div>
+    </div>
+    <div class="foto-dol spusty">
+      <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
+      <button id="ap-spust" aria-label="Zrób zdjęcie" disabled></button>
+      <button class="ikona" id="ap-zamien" aria-label="Przełącz aparat przedni i tylny" hidden><svg><use href="#i-zamien"/></svg></button>
+    </div>
+  </div>
+  <div class="foto-srodek" id="ap-gotowe" hidden>
+    <div class="kadr-pole"><canvas id="ap-papier" width="384" height="1" role="img" aria-label="Zdjęcie w kropkach, tak jak wyjdzie na papierze"></canvas></div>
+    <div class="foto-dol">
+      <div class="chipy" id="ap-style" role="group" aria-label="Styl zdjęcia"></div>
+      <label><span class="etykieta">Jasność <output id="ap-o-jasnosc"></output></span><input type="range" id="ap-jasnosc" min="-100" max="100" step="1"></label>
+      <div class="rzad"><button id="ap-powtorz">Powtórz</button><button id="ap-edytuj">Edytuj</button><button class="glowny" id="ap-drukuj">Drukuj</button></div>
+    </div>
+  </div>
+  <div class="foto-stan"><p id="ap-stan" role="status"></p><button id="ap-stop" hidden>Stop</button></div>
+</div>
+
+<div id="kadrowanie" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
   <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
   <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
   <div class="rzad"><button id="kadr-anuluj">Anuluj</button><button id="kadr-cale">Całe zdjęcie</button><button class="glowny" id="kadr-ok">Gotowe</button></div>
@@ -110,6 +138,7 @@
 
 <script src="rdzen.js"></script>
 <script src="drukarka.js"></script>
+<script src="aparat.js"></script>
 <script src="ekran.js"></script>
 </body>
 </html>

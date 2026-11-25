@@ -14,8 +14,9 @@ const wcisk = (atr, nazwa, ok) => `<button ${atr} aria-pressed="${!!ok}">${nazwa
 let komT = 0, dymekT = 0;
 function powiedz(t, klasa = '') {
   const k = $('komunikat'); clearTimeout(komT);
-  k.textContent = t; k.className = klasa;
-  if (t && klasa !== 'blad' && !drukuje) komT = setTimeout(() => { k.textContent = ''; }, 6000);
+  const pokaz = s => { k.textContent = $('ap-stan').textContent = s; };       // ap-stan: ten sam komunikat w aparacie
+  pokaz(t); k.className = $('ap-stan').className = klasa;
+  if (t && klasa !== 'blad' && !drukuje) komT = setTimeout(pokaz, 6000, '');
   const p = /(\d+)%/.exec(t);
   $('nav-druk').textContent = drukuje && p && !klasa ? `${p[1]}%` : 'Drukuj';
 }
@@ -43,17 +44,21 @@ $('cofnij').addEventListener('click', cofnij);
 /* ======================= PODGLĄD ======================= */
 let zaplanowane = 0, powieksz = false;
 function odswiez() { if (!zaplanowane) zaplanowane = requestAnimationFrame(() => { zaplanowane = 0; odswiezTeraz(); }); zapisz(); }
+function narysujKropki(c, dok) {                // zwraca liczbę narysowanych linii
+  const h = Math.min(dok.h, MAXH);
+  c.width = W; c.height = Math.max(1, h);
+  if (h) {
+    const x = c.getContext('2d'), im = x.createImageData(W, h);
+    for (let i = 0; i < W * h; i++) if (dok.px[i]) { im.data[i*4] = 28; im.data[i*4+1] = 28; im.data[i*4+2] = 40; im.data[i*4+3] = 255; }
+    x.putImageData(im, 0, 0);
+  }
+  return h;
+}
 function odswiezTeraz() {
   const czesci = bloki.map(rysujBlok);
   dokument = zloz(czesci);
   let y = 0; zakresy = czesci.map((c, i) => ({ id:bloki[i].id, y, h:(y += c.h, c.h) }));
-  const c = $('plotno'), h = Math.min(dokument.h, MAXH);
-  c.width = W; c.height = Math.max(1, h);
-  if (h) {
-    const x = c.getContext('2d'), im = x.createImageData(W, h);
-    for (let i = 0; i < W * h; i++) if (dokument.px[i]) { im.data[i*4] = 28; im.data[i*4+1] = 28; im.data[i*4+2] = 40; im.data[i*4+3] = 255; }
-    x.putImageData(im, 0, 0);
-  }
+  const h = narysujKropki($('plotno'), dokument);
   $('tasma').hidden = !h; $('pusto').hidden = !!h;
   $('dlugosc').textContent = h ? `ok. ${cm(dokument.h)}` : 'pusto';
   rozmiarPodgladu(); rysujRamke(); stanPrzyciskow();
@@ -87,21 +92,23 @@ $('tasma').addEventListener('click', e => {
 });
 new ResizeObserver(() => { rozmiarPodgladu(); rysujRamke(); }).observe($('stol'));
 
-/* ======================= WARSTWY (pełny podgląd, kadrowanie) + przycisk Wstecz ======================= */
-let warstwa = null;
+/* ======================= WARSTWY (pełny podgląd, kadrowanie, aparat) + przycisk Wstecz ======================= */
+let warstwa = null, wraca = false;
 function ustawWarstwe(w) {
   warstwa = w;
+  $('app').inert = w === 'kadr' || w === 'aparat' || w === 'zdjecie';   // to, co pod spodem, nie reaguje
   document.body.classList.toggle('pelny', w === 'pelny');
   $('kadrowanie').hidden = w !== 'kadr';
   $('zoom').hidden = w !== 'pelny';
   if (w !== 'pelny') { powieksz = false; $('zoom').textContent = 'Powiększ 2×'; }
   $('pelny').setAttribute('aria-label', w === 'pelny' ? 'Pokaż narzędzia' : 'Pokaż sam podgląd');
   $('pelny').querySelector('use').setAttribute('href', w === 'pelny' ? '#i-zwin' : '#i-pelny');
+  apWarstwa(w);
   rozmiarPodgladu(); rysujRamke();
 }
 function otworzWarstwe(w) { history.pushState({ warstwa:w }, ''); ustawWarstwe(w); }
-function zamknijWarstwe() { if (warstwa) history.back(); }
-addEventListener('popstate', () => ustawWarstwe(null));
+function zamknijWarstwe(ile = 1) { if (warstwa && !wraca) { wraca = true; history.go(-ile); } }   // wraca: szybkie drugie dotknięcie nie cofa dwa razy
+addEventListener('popstate', e => { wraca = false; ustawWarstwe(warstwa === 'zdjecie' && e.state && e.state.warstwa === 'aparat' ? 'aparat' : null); });
 $('pelny').addEventListener('click', () => warstwa ? zamknijWarstwe() : otworzWarstwe('pelny'));
 $('zoom').addEventListener('click', () => { powieksz = !powieksz; $('zoom').textContent = powieksz ? 'Dopasuj' : 'Powiększ 2×'; rozmiarPodgladu(); });
 
@@ -179,7 +186,7 @@ document.addEventListener('click', e => {
   const p = e.target.closest('[data-dodaj]'); if (!p) return;
   const co = p.dataset.dodaj;
   if (co === 'galeria') { $('plik').click(); return; }
-  if (co === 'aparat') { $('aparat').click(); return; }
+  if (co === 'aparat') { otworzAparat(); return; }
   zapamietaj();
   // Pusty tekst na starcie: pisz w nim, zamiast dokładać drugi.
   let b = co === 'text' && bloki.find(q => q.type === 'text' && !q.text.trim());
@@ -271,19 +278,24 @@ widok('wyglad').addEventListener('contextmenu', e => { if (e.target.closest('[da
 
 /* ======================= ZDJĘCIA ======================= */
 async function wczytajSrc(src) { if (!obrazy.has(src)) obrazy.set(src, await createImageBitmap(await (await fetch(src)).blob())); }
+async function zObrazu(obraz, w, h) {           // zmniejsza do 1200 px, zapamiętuje i zwraca adres zdjęcia
+  const skala = Math.min(1, 1200 / Math.max(w, h)), x = platno(Math.round(w * skala), Math.round(h * skala));
+  x.imageSmoothingQuality = 'high'; x.drawImage(obraz, 0, 0, x.canvas.width, x.canvas.height);
+  const src = x.canvas.toDataURL('image/jpeg', 0.88);
+  obrazy.set(src, await createImageBitmap(x.canvas));
+  return src;
+}
+async function zPliku(f) {
+  const bmp = await createImageBitmap(f, { imageOrientation:'from-image' });
+  try { return await zObrazu(bmp, bmp.width, bmp.height); } finally { bmp.close(); }
+}
 async function dodajPliki(pliki) {
   if (!pliki.length) return;
   powiedz('Wczytuję zdjęcie…'); let dodano = 0;
   const przed = migawka(), zle = [];
   for (const f of pliki) {
     try {
-      const bmp = await createImageBitmap(f, { imageOrientation:'from-image' });
-      const skala = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
-      const x = platno(Math.round(bmp.width * skala), Math.round(bmp.height * skala));
-      x.imageSmoothingQuality = 'high'; x.drawImage(bmp, 0, 0, x.canvas.width, x.canvas.height); bmp.close();
-      const src = x.canvas.toDataURL('image/jpeg', 0.88);
-      obrazy.set(src, await createImageBitmap(x.canvas));
-      const b = noweZdjecie(src, f.name || 'Zdjęcie'); bloki.push(b); wybrany = b.id; dodano++;
+      const b = noweZdjecie(await zPliku(f), f.name || 'Zdjęcie'); bloki.push(b); wybrany = b.id; dodano++;
     } catch { zle.push(f.name || 'plik'); }
   }
   if (dodano) {
@@ -292,7 +304,7 @@ async function dodajPliki(pliki) {
   }
   if (zle.length) powiedz(`Nie udało się odczytać: ${zle.join(', ')}. Działają m.in. JPG, PNG, WebP i GIF.`, 'blad'); else powiedz('');
 }
-for (const id of ['plik', 'aparat']) $(id).addEventListener('change', e => { dodajPliki([...e.target.files]); e.target.value = ''; });
+$('plik').addEventListener('change', e => { dodajPliki([...e.target.files]); e.target.value = ''; });
 document.addEventListener('paste', e => { const p = [...e.clipboardData.files].filter(f => f.type.startsWith('image/')); if (p.length) { e.preventDefault(); dodajPliki(p); } });
 document.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); document.body.classList.add('upuszczanie'); } });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('upuszczanie'); });
@@ -357,7 +369,7 @@ for (const t of ['pointerup', 'pointercancel']) $('kadr').addEventListener(t, ()
   kadr.chwyt = null; rysujKadr();
 });
 $('kadr-cale').addEventListener('click', () => { if (kadr) { kadr.r = [0, 0, 1, 1]; rysujKadr(); } });
-$('kadr-anuluj').addEventListener('click', zamknijWarstwe);
+$('kadr-anuluj').addEventListener('click', () => zamknijWarstwe());
 $('kadr-ok').addEventListener('click', () => {
   const { b, r } = kadr, [ax, ay] = zEkranu(b, r[0], r[1]), [bx, by] = zEkranu(b, r[2], r[3]);
   zapamietaj();
@@ -384,6 +396,7 @@ async function odczytaj() {
     const z = JSON.parse(localStorage.getItem(KLUCZ) || 'null');
     if (z) {
       ust = { ...DOMYSLNE, ...z.ust };
+      if (z.ust && !('apStyl' in z.ust)) ust.pakiet = DOMYSLNE.pakiet;             // zapis z 0.1/0.2: 20 bajtów było tam domyślne
       for (const b of z.bloki) {
         if (b.type === 'image') { try { await wczytajSrc(b.src); } catch { continue; } }
         if (b.type === 'text' && b.font === 'Segoe UI') b.font = 'sans-serif';     // domyślna czcionka wersji 0.1
@@ -407,7 +420,9 @@ function stanPrzyciskow() {
   $('drukuj').disabled = !bt || zajete || !dokument.h || zaDlugie;
   $('drukuj').textContent = zaDlugie ? 'Za długi (ponad 3,7 m)' : drukuje ? 'Drukuję…' : 'Drukuj teraz';
   for (const id of ['wysun', 'test', 'testTel', 'inne']) $(id).disabled = !bt || zajete;
-  $('stop').hidden = $('postep').hidden = !drukuje;
+  $('ap-drukuj').disabled = !bt || zajete || !ap.kropki;
+  $('ap-drukuj').textContent = dr.laczenie ? 'Łączę…' : drukuje ? 'Drukuję…' : 'Drukuj';
+  $('stop').hidden = $('postep').hidden = $('ap-stop').hidden = !drukuje;
   if (!drukuje) $('nav-druk').textContent = 'Drukuj';
 }
 const nazwijBlad = e => powiedz(e.name === 'NotFoundError' ? 'Nie wybrano drukarki.' : e.message, 'blad');
@@ -469,4 +484,5 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) naviga
   await odczytaj();
   wybrany = bloki.length ? bloki[0].id : null;
   pokazUst(); pokazWszystko();
+  if (new URLSearchParams(location.search).has('aparat')) { history.replaceState(null, '', location.pathname); otworzAparat(); }   // skrót "Aparat" z ikony na telefonie
 })();
