@@ -236,7 +236,7 @@ function paPokaz() {
   for (const p of $('pa-suwaki').querySelectorAll('[data-suwak]')) p.setAttribute('aria-pressed', p.dataset.suwak === pa.suwak);
   for (const p of $('paski').querySelectorAll('[data-kier]')) p.setAttribute('aria-pressed', p.dataset.kier === pa.kier);
   $('pa-miekki').setAttribute('aria-pressed', !!ust.paMiekki); $('pa-wyrownaj').setAttribute('aria-pressed', !!ust.paWyrownaj);
-  $('pa-dodaj').disabled = n >= PA_MAX; $('pa-usun').disabled = n < 2;
+  $('pa-dodaj').disabled = n >= PA_MAX; $('pa-usun').disabled = n < 2; $('pa-bez-zdjecia').disabled = !f.img;
   $('pa-rowne').disabled = n < 2 || pa.lista.every(g => Math.abs(g.u - 1 / n) < 1e-4);
   const [nazwa, min, max] = SUWAKI_PA[pa.suwak], s = $('pa-suwak'), w = paWartosc(f, pa.suwak);
   $('pa-n-suwak').textContent = nazwa; s.min = min; s.max = max; s.value = w; $('pa-o-suwak').textContent = paOpis(pa.suwak, w);
@@ -364,6 +364,11 @@ function paZmien(dzialaj) {                     // zmiana jednym przyciskiem, z 
 }
 $('pa-dodaj').addEventListener('click', () => paZmien((f, i) => { const g = paDodaj(i); if (g) pa.wybrany = g.id; }));
 $('pa-usun').addEventListener('click', () => paZmien((f, i) => paUsun(i)));   // da się cofnąć, więc bez pytania
+$('pa-bez-zdjecia').addEventListener('click', () => paZmien((f, i) => {   // pasek zostaje (miejsce i szerokość), tylko bez zdjęcia
+  if (!f.img) return;
+  Object.assign(f, { src:null, img:null, rama:null, dx:0, dy:0, s:1, jasnosc:0, zr:null });
+  pa.cache.delete(f.id); pa.krok = i;           // zdjęcie zostaje w Cofnij; z pamięci zniknie, gdy nic do niego nie prowadzi
+}));
 $('pa-rowne').addEventListener('click', () => paZmien(() => { for (const g of pa.lista) g.u = 1 / pa.lista.length; }));
 $('pa-kierunki').addEventListener('click', e => { const p = e.target.closest('[data-kier]'); if (p && p.dataset.kier !== pa.kier) paZmien(() => { pa.kier = p.dataset.kier; }); });
 for (const [id, klucz] of [['pa-miekki', 'paMiekki'], ['pa-wyrownaj', 'paWyrownaj']])

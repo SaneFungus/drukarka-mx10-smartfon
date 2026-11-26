@@ -1,6 +1,6 @@
 'use strict';
 /* ======================= STAŁE I STAN ======================= */
-const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.9 (2026-11-26)';
+const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.9.1 (2026-11-26)';
 const PUNKTY_NA_CM = 80;                      // 384 punkty = 48 mm druku
 const $ = id => document.getElementById(id);
 /* Kandydaci: najpierw rodziny Androida, potem Windows. Na ekranie pojawią się tylko te, które na danym urządzeniu

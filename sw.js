@@ -3,7 +3,7 @@
    - zapisane pliki podawane są od razu z pamięci telefonu (brak czekania przy słabym zasięgu),
    - w tle cała paczka sprawdzana jest jako całość, żeby nigdy nie zmieszać starych i nowych skryptów,
    - kasowane są tylko własne kopie (przedrostek "mx10-"). */
-const KOPIA = 'mx10-9';
+const KOPIA = 'mx10-9-1';
 const PLIKI = ['./', 'styl.css', 'rdzen.js', 'qr.js', 'drukarka.js', 'aparat.js', 'twarz.js', 'czesci.js', 'paski.js', 'ekran.js',
   'manifest.webmanifest', 'ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maska-512.png'];
 let ostatnieOdswiezanie = 0;
