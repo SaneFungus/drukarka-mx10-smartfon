@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#252b30" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikony/ikona-192.png" type="image/png">
+<link rel="apple-touch-icon" href="ikony/ikona-192.png">
 <link rel="stylesheet" href="styl.css">
 <title>MX10 – smartfon</title>
 </head>
@@ -20,6 +21,9 @@
     <symbol id="i-tekst" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
     <symbol id="i-zdjecie" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5"/><circle cx="15.5" cy="9" r="1.5"/></symbol>
     <symbol id="i-aparat" viewBox="0 0 24 24"><path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h3v3h-3zM17 17h3v3h-3zM20 14h.01M14 20h.01"/></symbol>
+    <symbol id="i-zegar" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2h5M12 2v3"/></symbol>
+    <symbol id="i-udostepnij" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
     <symbol id="i-zamien" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></symbol>
     <symbol id="i-lampa" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
@@ -32,9 +36,10 @@
 
 <div id="app">
   <header>
-    <h1>MX10 – smartfon</h1>
+    <h1>MX10</h1>
     <button id="stan" class="niepolaczona"><span id="stan-tekst">Połącz</span></button>
     <button class="ikona" id="cofnij" aria-label="Cofnij ostatnią zmianę" disabled><svg><use href="#i-cofnij"/></svg></button>
+    <button class="ikona" id="ponow" aria-label="Ponów cofniętą zmianę" disabled><svg><use href="#i-ponow"/></svg></button>
     <button class="ikona" id="pelny" aria-label="Pokaż sam podgląd"><svg><use href="#i-pelny"/></svg></button>
   </header>
 
@@ -44,6 +49,7 @@
       <p>Tu zobaczysz swój wydruk.</p>
       <div class="rzad"><button class="glowny" data-dodaj="aparat"><svg><use href="#i-aparat"/></svg>Zrób zdjęcie</button></div>
       <div class="rzad"><button data-dodaj="text"><svg><use href="#i-tekst"/></svg>Wpisz tekst</button><button data-dodaj="galeria"><svg><use href="#i-zdjecie"/></svg>Dodaj zdjęcie</button></div>
+      <div class="rzad"><button data-dodaj="qr"><svg><use href="#i-qr"/></svg>Kod QR (link, Wi‑Fi)</button></div>
     </div>
   </main>
   <button id="zoom" hidden>Powiększ 2×</button>
@@ -52,9 +58,9 @@
     <p id="brak" hidden>Ta przeglądarka nie obsługuje Bluetooth na stronach. Otwórz ten adres w Google Chrome. Podgląd działa, drukowanie nie.</p>
     <p id="komunikat" role="status"></p>
     <section id="panel">
-      <div class="widok" data-widok="tresc"></div>
-      <div class="widok" data-widok="wyglad" hidden></div>
-      <div class="widok" data-widok="ust" hidden>
+      <div class="widok" id="widok-tresc" data-widok="tresc" role="tabpanel" aria-labelledby="tab-tresc"></div>
+      <div class="widok" id="widok-wyglad" data-widok="wyglad" role="tabpanel" aria-labelledby="tab-wyglad" hidden></div>
+      <div class="widok" id="widok-ust" data-widok="ust" role="tabpanel" aria-labelledby="tab-ust" hidden>
         <div class="rzad"><button id="wysun">Wysuń papier</button><button id="test">Pasek testowy</button></div>
         <p class="podp">Pasek testowy drukuje ten sam wzór w sześciu mocach. Najlepszą ustawisz pod „Drukuj”.</p>
         <div class="rzad"><button id="polacz">Połącz z drukarką</button></div>
@@ -82,7 +88,7 @@
         </details>
         <p class="podp" id="wersja"></p>
       </div>
-      <div class="widok" data-widok="druk" hidden>
+      <div class="widok" id="widok-druk" data-widok="druk" role="tabpanel" aria-labelledby="nav-druk" hidden>
         <div class="stepper">
           <span>Długość <strong id="dlugosc"></strong></span>
           <span class="kopie"><button id="mniej" aria-label="Mniej kopii">−</button><output id="o-copies" aria-label="Liczba kopii"></output><button id="wiecej" aria-label="Więcej kopii">+</button></span>
@@ -92,20 +98,28 @@
           <input type="range" data-s="energy" min="4000" max="40000" step="500"></label>
         <progress id="postep" max="1" value="0" hidden aria-label="Postęp wysyłania"></progress>
         <div class="rzad"><button class="glowny" id="drukuj">Drukuj teraz</button><button id="stop" hidden>Stop</button></div>
+        <div class="rzad"><button class="z-ikona" id="zapisz-obraz"><svg><use href="#i-udostepnij"/></svg>Zapisz lub wyślij jako obraz</button></div>
       </div>
     </section>
     <nav role="tablist" aria-label="Narzędzia">
-      <button role="tab" data-zakladka="tresc"><svg><use href="#i-tresc"/></svg>Treść</button>
-      <button role="tab" data-zakladka="wyglad"><svg><use href="#i-wyglad"/></svg>Wygląd</button>
-      <button role="tab" data-zakladka="ust"><svg><use href="#i-ust"/></svg>Ustawienia</button>
-      <button role="tab" data-zakladka="druk" class="glowny" id="nav-druk">Drukuj</button>
+      <button role="tab" id="tab-tresc" aria-controls="widok-tresc" data-zakladka="tresc"><svg><use href="#i-tresc"/></svg>Treść</button>
+      <button role="tab" id="tab-wyglad" aria-controls="widok-wyglad" data-zakladka="wyglad"><svg><use href="#i-wyglad"/></svg>Wygląd</button>
+      <button role="tab" id="tab-ust" aria-controls="widok-ust" data-zakladka="ust"><svg><use href="#i-ust"/></svg>Ustawienia</button>
+      <button role="tab" id="nav-druk" aria-controls="widok-druk" data-zakladka="druk" class="glowny">Drukuj</button>
     </nav>
   </div>
 </div>
 
 <div id="foto" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Aparat">
   <div class="foto-gora"><button class="ikona" id="ap-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button>
-    <div class="foto-gora-prawa"><button id="ap-porady" hidden>Porady</button><button id="tw-galeria" hidden>Z galerii</button><button id="ap-telefon">Aparat telefonu</button></div></div>
+    <div class="foto-gora-prawa">
+      <button id="ap-porady" hidden>Porady</button>
+      <button id="tw-galeria" hidden>Z galerii</button>
+      <button id="ap-telefon">Aparat telefonu</button>
+      <button id="ap-kadruj" hidden>Kadruj</button>
+      <button class="z-ikona" id="ap-udostepnij" hidden><svg><use href="#i-udostepnij"/></svg>Wyślij</button>
+    </div>
+  </div>
   <div class="foto-srodek" id="ap-zywo">
     <div id="pa-krok" hidden role="status"><p><strong id="pa-krok-tytul">Pasek 1 z 3</strong><span id="pa-krok-rada"></span></p>
       <div class="cz-przyciski" id="pa-krok-przyciski"><button id="pa-wyczysc2">Wyczyść</button><button id="pa-uloz">Ułóż</button></div></div>
@@ -113,6 +127,8 @@
       <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
       <canvas id="tw-nakladka" hidden aria-hidden="true"></canvas>
       <canvas id="pa-nakladka" hidden aria-hidden="true"></canvas>
+      <div id="ap-odliczanie" hidden aria-live="assertive"></div>
+      <div id="ap-blysk" hidden aria-hidden="true"></div>
       <div id="cz-krok" hidden role="status"><p><strong id="cz-krok-tytul">Z części</strong><span id="cz-krok-rada"></span></p>
         <div class="cz-przyciski" id="cz-krok-przyciski"><button id="cz-wyczysc2">Wyczyść</button><button id="cz-anuluj" hidden>Anuluj</button><button id="cz-uloz">Ułóż</button></div></div>
       <div id="tw-krok" hidden role="status"><p><strong id="tw-krok-nr"></strong><span id="tw-krok-rada"></span></p><button id="tw-krok-przycisk" hidden></button></div>
@@ -124,7 +140,7 @@
           <li>Patrz prosto w obiektyw, nie przechylaj głowy.</li>
           <li>Policzki mają dotykać konturu. Wtedy każda twarz wyjdzie w tej samej skali.</li>
           <li>Światło z przodu, nie z boku. Cień z jednej strony zdradzi szew.</li>
-          <li>Najlepiej, gdy zdjęcie robi ktoś inny, tylnym aparatem, z około pół metra. Przednim aparatem z bliska nos wychodzi większy.</li>
+          <li>Najlepiej, gdy zdjęcie robi ktoś inny, tylnym aparatem, z około pół metra. Możesz też włączyć samowyzwalacz 3 s (ikona zegarka).</li>
         </ul>
         <button class="glowny" id="tw-zaczynam">Zaczynam</button>
       </div>
@@ -159,7 +175,10 @@
       <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button><button data-tryb="czesci">Z części</button><button data-tryb="paski">Paski</button></div>
       <div class="pa-ustaw" id="pa-ustaw" hidden><div class="pa-kier" role="group" aria-label="Kierunek pasków"><button data-kier="poziome">Poziome</button><button data-kier="pionowe">Pionowe</button></div>
         <div class="kopie"><button id="pa-mniej" aria-label="Mniej pasków">−</button><output id="pa-ile" aria-label="Liczba pasków">3</output><button id="pa-wiecej" aria-label="Więcej pasków">+</button></div></div>
-      <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
+      <div class="ap-lewe">
+        <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
+        <button class="ikona" id="ap-zegar" aria-label="Samowyzwalacz 3 sekundy" aria-pressed="false" hidden><svg><use href="#i-zegar"/></svg></button>
+      </div>
       <button id="ap-spust" aria-label="Zrób zdjęcie" disabled></button>
       <button class="ikona" id="ap-zamien" aria-label="Przełącz aparat przedni i tylny" hidden><svg><use href="#i-zamien"/></svg></button>
     </div>
@@ -168,8 +187,15 @@
     <div class="kadr-pole"><canvas id="ap-papier" width="384" height="1" role="img" aria-label="Zdjęcie w kropkach, tak jak wyjdzie na papierze"></canvas></div>
     <div class="foto-dol">
       <div class="chipy" id="ap-style" role="group" aria-label="Styl zdjęcia"></div>
-      <label><span class="etykieta">Jasność <output id="ap-o-jasnosc"></output></span><input type="range" id="ap-jasnosc" min="-100" max="100" step="1"></label>
-      <div class="rzad"><button id="ap-powtorz">Powtórz</button><button id="ap-edytuj">Edytuj</button><button class="glowny" id="ap-drukuj">Drukuj</button></div>
+      <div class="ap-strojenie">
+        <div class="ap-przelacznik" id="ap-parametry" role="group" aria-label="Co stroić">
+          <button data-ap-suwak="bright" aria-pressed="true">Jasność</button>
+          <button data-ap-suwak="contrast" aria-pressed="false">Kontrast</button>
+        </div>
+        <output id="ap-o-suwak">0</output>
+      </div>
+      <input type="range" id="ap-suwak" min="-100" max="100" step="1" aria-label="Wartość wybranego parametru">
+      <div class="rzad"><button id="ap-powtorz">Powtórz</button><button id="ap-edytuj">Do treści</button><button class="glowny" id="ap-drukuj">Drukuj</button></div>
     </div>
   </div>
   <div class="foto-stan"><p id="ap-stan" role="status"></p><button id="ap-stop" hidden>Stop</button></div>
@@ -242,6 +268,12 @@
 
 <div id="kadrowanie" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
   <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
+  <div class="chipy kadr-prop" id="kadr-proporcje" role="group" aria-label="Proporcje kadru">
+    <button data-prop="0" aria-pressed="true">Dowolny</button>
+    <button data-prop="0.75" aria-pressed="false">3:4</button>
+    <button data-prop="1" aria-pressed="false">1:1</button>
+    <button data-prop="1.3333" aria-pressed="false">4:3</button>
+  </div>
   <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
   <div class="rzad"><button id="kadr-anuluj">Anuluj</button><button id="kadr-cale">Całe zdjęcie</button><button class="glowny" id="kadr-ok">Gotowe</button></div>
 </div>
@@ -252,6 +284,7 @@
 <input type="file" id="tw-plik" accept="image/*" hidden>
 
 <script src="rdzen.js"></script>
+<script src="qr.js"></script>
 <script src="drukarka.js"></script>
 <script src="aparat.js"></script>
 <script src="twarz.js"></script>

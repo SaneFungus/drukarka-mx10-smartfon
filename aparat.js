@@ -1,26 +1,28 @@
 'use strict';
-/* Aparat w aplikacji: obraz na żywo -> spust -> podgląd kropek -> Drukuj.
-   Zdjęcie drukuje się osobno, bez reszty treści. "Edytuj" dokłada je do wydruku w głównym ekranie.
+/* Aparat w aplikacji: obraz na żywo -> spust (z opcjonalnym samowyzwalaczem 3 s) -> podgląd kropek -> Drukuj / Wyślij / Kadruj.
+   Zdjęcie drukuje się osobno, bez reszty treści. "Do treści" dokłada je do wydruku w głównym ekranie.
    Warstwa 'aparat' = obraz na żywo, warstwa 'zdjecie' = zrobione zdjęcie (obsługa Wstecz w ekran.js). */
-const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0, z:'aparat' };
-/* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie, aparat -> twarz -> zdjęcie (twarz.js)
-   albo aparat -> [wytnij] -> czesci -> [wytnij z bazowego] -> zdjęcie (czesci.js), albo aparat -> paski -> zdjęcie (paski.js).
-   ap.z = warstwa, z której przyszło zdjęcie. */
+const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, suwak:'bright', odliczT:0, od:0, zaplanowane:0, z:'aparat' };
 const apGlebia = () => warstwa === 'zdjecie' ? (ap.z === 'aparat' ? 2 : ap.z === 'czesci' ? 1 + czGlebia() : 3)
   : warstwa === 'czesci' ? czGlebia() : warstwa === 'wytnij' ? wyGlebia() : warstwa === 'twarz' || warstwa === 'paski' ? 2 : 1;
 
 /* ======================= OBRAZ NA ŻYWO ======================= */
+function apAnulujOdliczanie() {
+  if (ap.odliczT) { clearTimeout(ap.odliczT); ap.odliczT = 0; }
+  $('ap-odliczanie').hidden = true; $('ap-odliczanie').textContent = '';
+}
 function apZatrzymaj() {
-  ap.nr++;                                     // unieważnia włączanie, które jeszcze trwa
+  ap.nr++;                                     // unieważnia włączanie i odliczanie, które jeszcze trwają
+  apAnulujOdliczanie();
   if (ap.strumien) for (const t of ap.strumien.getTracks()) t.stop();
   ap.strumien = null; ap.lampa = false;
   $('ap-wideo').srcObject = null;
-  $('ap-spust').disabled = true; $('ap-lampa').hidden = $('ap-zamien').hidden = true;
+  $('ap-spust').disabled = true; $('ap-lampa').hidden = $('ap-zegar').hidden = $('ap-zamien').hidden = true;
 }
 function apInfo(t, blad = false) { $('ap-info').hidden = !t; $('ap-info-tekst').textContent = t; $('ap-telefon2').hidden = !blad; }
-const apRozdzielczosc = () => ust.apTryb === 'czesci'   // przy wycinaniu z daleka liczy się każdy szczegół
+const apRozdzielczosc = () => ust.apTryb === 'czesci'
   ? { width:{ ideal:2560 }, height:{ ideal:1920 } } : { width:{ ideal:1600 }, height:{ ideal:1200 } };
-const apMax = () => ust.apTryb === 'czesci' ? WY_MAX : 1200;   // największy bok zapamiętanego zdjęcia
+const apMax = () => ust.apTryb === 'czesci' ? WY_MAX : 1200;
 async function apUruchom() {
   apZatrzymaj();
   const nr = ap.nr, v = $('ap-wideo');
@@ -36,6 +38,7 @@ async function apUruchom() {
     v.srcObject = s; await v.play();
     if (nr !== ap.nr) return;
     $('ap-lampa').hidden = !moze.torch; $('ap-lampa').setAttribute('aria-pressed', 'false');
+    $('ap-zegar').hidden = false; $('ap-zegar').setAttribute('aria-pressed', !!ust.apZegar);
     $('ap-spust').disabled = false; apInfo('');
     const ile = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput').length;
     if (nr === ap.nr) $('ap-zamien').hidden = ile < 2;
@@ -53,24 +56,34 @@ function apWarstwa(w) {                         // wywoływane z ustawWarstwe pr
   $('foto').hidden = w !== 'aparat' && w !== 'zdjecie';
   $('ap-zywo').hidden = w !== 'aparat'; $('ap-gotowe').hidden = w !== 'zdjecie';
   $('ap-telefon').hidden = w !== 'aparat';
-  if (w !== 'zdjecie' && ap.b) { if (!bloki.includes(ap.b)) obrazy.delete(ap.b.src); ap.b = ap.kropki = null; }
+  $('ap-kadruj').hidden = $('ap-udostepnij').hidden = w !== 'zdjecie';
+  if (w !== 'aparat') apAnulujOdliczanie();
+  const wKadrzeAparatu = w === 'kadr' && kadr && kadr.b === ap.b;
+  if (w !== 'zdjecie' && !wKadrzeAparatu && ap.b) { if (!bloki.includes(ap.b)) usunObraz(ap.b.src); ap.b = ap.kropki = null; }
   if (w === 'aparat') { if (ap.strumien) $('ap-wideo').play().catch(() => {}); else apUruchom(); $('ap-spust').focus(); }
-  else if (w === 'zdjecie') $('ap-wideo').pause();
-  else apZatrzymaj();
+  else if (w === 'zdjecie') { $('ap-wideo').pause(); if (ap.b) apPrzelicz(); }
+  else if (!wKadrzeAparatu) apZatrzymaj();
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) apZatrzymaj(); else if (warstwa === 'aparat' && !ap.strumien) apUruchom();
 });
 
 /* ======================= ZROBIONE ZDJĘCIE ======================= */
+function apUstawSuwak() {
+  if (!ap.b) return;
+  for (const p of $('ap-parametry').children) p.setAttribute('aria-pressed', p.dataset.apSuwak === ap.suwak);
+  const s = $('ap-suwak');
+  if (ap.suwak === 'bright') { s.min = -100; s.max = 100; s.step = 1; s.value = ap.b.bright; $('ap-o-suwak').textContent = ap.b.bright; }
+  else { s.min = 0.2; s.max = 3; s.step = 0.05; s.value = ap.b.contrast; $('ap-o-suwak').textContent = fmt(ap.b.contrast); }
+}
 function apPokaz(src, nazwa = 'Zdjęcie z aparatu') {
-  if (!['aparat', 'twarz', 'czesci', 'paski'].includes(warstwa)) { obrazy.delete(src); return; }
+  if (!['aparat', 'twarz', 'czesci', 'paski'].includes(warstwa)) { usunObraz(src); return; }
   ap.z = warstwa;
-  ap.b = { ...noweZdjecie(src, nazwa), dither:ust.apStyl, bright:ust.apJasnosc };
+  ap.b = { ...noweZdjecie(src, nazwa), dither:ust.apStyl, bright:ust.apJasnosc, contrast:ust.apKontrast };
   ap.od = performance.now();
   $('ap-powtorz').textContent = ap.z === 'aparat' ? 'Powtórz' : 'Dopasuj';
   $('ap-style').innerHTML = RASTRY.map(([v, t]) => wcisk(`data-styl="${v}"`, t, v === ust.apStyl)).join('');
-  $('ap-jasnosc').value = ust.apJasnosc; $('ap-o-jasnosc').textContent = ust.apJasnosc;
+  apUstawSuwak();
   if (!drukuje) powiedz('');
   otworzWarstwe('zdjecie'); apPrzelicz();
 }
@@ -87,11 +100,12 @@ function apRozmiar() {                          // całe zdjęcie na ekranie; gd
   if (rowno) css = n * W / dpr;
   c.style.width = `${css}px`; c.style.imageRendering = rowno ? 'pixelated' : 'auto';
 }
-const apZaWczesnie = () => performance.now() - ap.od < 400;   // drugie dotknięcie spustu nie może trafić w przycisk, który pojawił się pod palcem
+const apZaWczesnie = () => performance.now() - ap.od < 400;   // drugie dotknięcie spustu nie może trafić w przycisk pod palcem
 
-$('ap-spust').addEventListener('click', async () => {
-  const v = $('ap-wideo'); if (!ap.strumien || v.videoWidth < 32) return;   // aparat dopiero się budzi
+async function apZrobZdjecie() {
+  const v = $('ap-wideo'); if (!ap.strumien || v.videoWidth < 32) return;
   $('ap-spust').disabled = true;
+  const bl = $('ap-blysk'); bl.hidden = false; setTimeout(() => { bl.hidden = true; }, 110);
   try {
     const src = await zObrazu(v, v.videoWidth, v.videoHeight, apMax());
     if (ust.apTryb === 'twarz') twUjecie(src, ramaDla(v.videoWidth, v.videoHeight));
@@ -101,6 +115,25 @@ $('ap-spust').addEventListener('click', async () => {
   }
   catch { apInfo('Nie udało się zrobić zdjęcia. Spróbuj jeszcze raz.'); setTimeout(() => apInfo(''), 3000); }
   finally { $('ap-spust').disabled = !ap.strumien; }
+}
+$('ap-spust').addEventListener('click', () => {
+  const v = $('ap-wideo'); if (!ap.strumien || v.videoWidth < 32) return;
+  if (ap.odliczT) { apAnulujOdliczanie(); return; }   // ponowne dotknięcie spustu przerywa odliczanie
+  if (!ust.apZegar) { apZrobZdjecie(); return; }
+  let sek = 3;
+  const odl = $('ap-odliczanie'), nr = ap.nr;
+  const krok = () => {
+    if (nr !== ap.nr || warstwa !== 'aparat' || !ap.strumien) { apAnulujOdliczanie(); return; }
+    if (!sek) { apAnulujOdliczanie(); apZrobZdjecie(); return; }
+    odl.textContent = sek--; odl.hidden = false;
+    ap.odliczT = setTimeout(krok, 1000);
+  };
+  krok();
+});
+$('ap-zegar').addEventListener('click', () => {
+  ust.apZegar = !ust.apZegar; zapisz();
+  $('ap-zegar').setAttribute('aria-pressed', ust.apZegar);
+  if (!ust.apZegar) apAnulujOdliczanie();
 });
 $('ap-zamien').addEventListener('click', () => { ap.kier = ap.kier === 'user' ? 'environment' : 'user'; apUruchom(); });
 $('ap-lampa').addEventListener('click', async () => {
@@ -122,17 +155,26 @@ $('ap-style').addEventListener('click', e => {
   for (const q of $('ap-style').children) q.setAttribute('aria-pressed', q === p);
   apPrzelicz();
 });
-$('ap-jasnosc').addEventListener('input', e => {
+$('ap-parametry').addEventListener('click', e => {
+  const p = e.target.closest('[data-ap-suwak]'); if (!p || !ap.b) return;
+  ap.suwak = p.dataset.apSuwak; apUstawSuwak();
+});
+$('ap-suwak').addEventListener('input', e => {
   if (!ap.b) return;
-  ap.b.bright = ust.apJasnosc = +e.target.value; $('ap-o-jasnosc').textContent = ust.apJasnosc; zapisz();
+  const v = +e.target.value;
+  if (ap.suwak === 'bright') { ap.b.bright = ust.apJasnosc = v; $('ap-o-suwak').textContent = v; }
+  else { ap.b.contrast = ust.apKontrast = v; $('ap-o-suwak').textContent = fmt(v); }
+  zapisz();
   if (!ap.zaplanowane) ap.zaplanowane = requestAnimationFrame(() => { ap.zaplanowane = 0; apPrzelicz(); });
 });
+$('ap-kadruj').addEventListener('click', () => { if (!apZaWczesnie() && ap.b) otworzKadr(ap.b); });
+$('ap-udostepnij').addEventListener('click', () => { if (!apZaWczesnie() && ap.kropki && ap.b) udostepnijKropki(ap.kropki, ap.b.name); });
 $('ap-zamknij').addEventListener('click', () => zamknijWarstwe(apGlebia()));
 $('ap-powtorz').addEventListener('click', () => { if (!apZaWczesnie()) zamknijWarstwe(); });
 $('ap-edytuj').addEventListener('click', () => {
   if (apZaWczesnie() || !ap.b || bloki.includes(ap.b)) return;
   zapamietaj(); bloki.push(ap.b); wybrany = ap.b.id;
-  zamknijWarstwe(apGlebia()); if (ap.z === 'twarz') twWyczysc();   // złożona twarz jest już w treści; wycinki zostają do "Wyczyść"
+  zamknijWarstwe(apGlebia()); if (ap.z === 'twarz') twWyczysc();
   otworzZakladke('wyglad'); odswiezTeraz(); zapisz(); przewinDoWybranego();
 });
 $('ap-drukuj').addEventListener('click', async () => {

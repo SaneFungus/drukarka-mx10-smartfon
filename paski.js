@@ -9,12 +9,8 @@
 const PA_BRZEG = 16 / W;                        // miękki brzeg: 16 kropek (ok. 2 mm), w ułamku szerokości ramki
 const PA_MIN = 0.02;                            // najwęższy pasek: 2% ramki
 const PA_MAX = 20;                              // najwięcej pasków
-/* lista = paski po kolei (od góry albo od lewej): {id,u,src,img,rama,dx,dy,s,jasnosc,zr}
-   u = szerokość paska w ułamku ramki (wszystkie razem = 1), src/img = zdjęcie albo null, gdy jeszcze go nie ma,
-   rama = ramka 3:4 na zdjęciu (jak w twarz.js), dx,dy = przesunięcie zdjęcia, s = jego rozmiar, zr = średnia jasność i rozrzut zdjęcia.
-   krok = pasek, który teraz fotografujesz, wybrany = id paska wybranego przy układaniu. */
 const pa = { kier:'poziome', lista:[], nr:1, krok:0, wybrany:null, suwak:'szerokosc', palce:new Map(), gest:null, zmieniono:false,
-  suwakZm:false, cofnij:[], ponow:[], moje:new Set(), zaplanowane:0, zapisT:0 };
+  suwakZm:false, cofnij:[], ponow:[], moje:new Set(), cache:new Map(), zaplanowane:0, zapisT:0 };
 
 const paPusty = u => ({ id:pa.nr++, u, src:null, img:null, rama:null, dx:0, dy:0, s:1, jasnosc:0, zr:null });
 function paStart(n = 3) { pa.lista = []; for (let i = 0; i < n; i++) pa.lista.push(paPusty(1 / n)); pa.krok = 0; pa.wybrany = pa.lista[0].id; }
@@ -44,12 +40,14 @@ function paPrzywroc(skad, dokad) {
   const s = skad.pop();
   pa.kier = s.kier; pa.lista = s.lista.map(f => ({ ...f })); pa.wybrany = paPasek(s.wybrany) ? s.wybrany : pa.lista[0].id;
   pa.krok = Math.min(s.krok, pa.lista.length - 1);
-  paZapisz(); paPokaz();
+  paSprzataj(); paZapisz(); paPokaz();
 }
-function paSprzataj() {                         // zdjęcia, do których nic już nie prowadzi (także w Cofnij), znikają z pamięci
-  const jest = new Set(), dodaj = s => { for (const f of s.lista) if (f.src) jest.add(f.src); };
+function paSprzataj() {                         // zdjęcia i bufory, do których nic już nie prowadzi (także w Cofnij), znikają z pamięci
+  const jest = new Set(), zyweId = new Set();
+  const dodaj = s => { for (const f of s.lista) { zyweId.add(f.id); if (f.src) jest.add(f.src); } };
   dodaj(pa); pa.cofnij.forEach(dodaj); pa.ponow.forEach(dodaj);
-  for (const src of pa.moje) if (!jest.has(src)) { obrazy.delete(src); pa.moje.delete(src); }
+  for (const src of pa.moje) if (!jest.has(src)) { usunObraz(src); pa.moje.delete(src); }
+  for (const id of pa.cache.keys()) if (!zyweId.has(id)) pa.cache.delete(id);
 }
 
 /* ======================= ZMIANY PASKÓW ======================= */
@@ -129,7 +127,7 @@ function paKrok() {                             // pasek u góry i liczba paskó
   $('pa-mniej').disabled = n < 2; $('pa-wiecej').disabled = n >= PA_MAX;
 }
 function paZdjecie(src) {                       // zdjęcie ze spustu albo z galerii trafia do bieżącego paska
-  if (warstwa !== 'aparat') { obrazy.delete(src); return; }
+  if (warstwa !== 'aparat') { usunObraz(src); return; }
   const img = obrazy.get(src);
   paZmiana(); pa.moje.add(src);                 // w tej kolejności: sprzątanie w paZmiana nie zna jeszcze nowego zdjęcia
   const f = pa.lista[pa.krok];
@@ -157,7 +155,7 @@ $('pa-ustaw').addEventListener('click', e => {
   paZapisz(); paNakladka();
 });
 $('ap-wideo').parentElement.addEventListener('click', e => {   // dotknięcie paska na obrazie z aparatu: teraz ten
-  if (warstwa !== 'aparat' || ust.apTryb !== 'paski' || e.target.closest('button, #pa-krok, #pa-porady, #ap-info')) return;
+  if (warstwa !== 'aparat' || ust.apTryb !== 'paski' || e.target.closest('button, #pa-krok, #pa-porady, #ap-info, #ap-odliczanie')) return;
   const r = paRamkaEkranu(); if (!r) return;
   const b = $('pa-nakladka').getBoundingClientRect();
   let px = e.clientX - b.left; const py = e.clientY - b.top;
@@ -177,13 +175,20 @@ for (const t of ['loadedmetadata', 'resize']) $('ap-wideo').addEventListener(t, 
 new ResizeObserver(paNakladka).observe($('pa-nakladka').parentElement);
 
 /* ======================= SKŁADANIE ======================= */
+function paSzare(f, ow, oh) {                   // pełna ramka paska zapamiętana w szarościach: zmiana szerokości nie przerysowuje zdjęć
+  const klucz = `${f.src}|${f.dx}|${f.dy}|${f.s}|${ow}`;
+  let c = pa.cache.get(f.id);
+  if (!c || c.klucz !== klucz) {
+    const x = platno(ow, oh); x.imageSmoothingQuality = 'high'; rysujFragment(x, f, 0, 0, ow, oh);
+    c = { klucz, g:szary(x, ow, oh) };
+    pa.cache.set(f.id, c);
+  }
+  return c.g;
+}
 function paZloz(ow, ekran = false) {            // wynik: ImageData w odcieniach szarości, szerokość ow, proporcje 3:4
   const oh = Math.round(ow / 0.75), n = ow * oh, L = pa.lista, pion = paPion(), D = pion ? ow : oh;
   const b = ust.paMiekki ? PA_BRZEG * ow : 0, a = paGranice(D);
-  const v = new Float32Array(n), ws = new Float32Array(n), x = platno(ow, oh);
-  x.imageSmoothingQuality = 'high';
-  /* Wyrównanie jasności: każde zdjęcie dostaje średnią jasność i kontrast wszystkich zdjęć pasków.
-     Liczone z całych zdjęć, więc pasek z ustami zostaje ciemniejszy niż pasek z czołem. */
+  const v = new Float32Array(n), ws = new Float32Array(n);
   const zr = L.filter(f => f.img && f.zr).map(f => f.zr), M = zr.reduce((s, z) => s + z.m, 0) / (zr.length || 1), Dd = zr.reduce((s, z) => s + z.d, 0) / (zr.length || 1);
   L.forEach((f, i) => {
     const lo = Math.max(0, Math.floor(i ? a[i] - b / 2 : 0)), hi = Math.min(D, Math.ceil(i < L.length - 1 ? a[i + 1] + b / 2 : D));
@@ -191,21 +196,26 @@ function paZloz(ow, ekran = false) {            // wynik: ImageData w odcieniach
     const wagi = new Float32Array(hi - lo);     // udział paska w każdej linii wzdłuż osi
     for (let t = lo; t < hi; t++) wagi[t - lo] = (i ? waga(t, a[i], b) : 1) * (i < L.length - 1 ? 1 - waga(t, a[i + 1], b) : 1);
     const [rx, ry, rw, rh] = pion ? [lo, 0, hi - lo, oh] : [0, lo, ow, hi - lo];
-    let g;
     if (f.img) {
-      x.fillStyle = '#fff'; x.fillRect(rx, ry, rw, rh);
-      x.save(); x.beginPath(); x.rect(rx, ry, rw, rh); x.clip(); rysujFragment(x, f, 0, 0, ow, oh); x.restore();
-      const d = x.getImageData(rx, ry, rw, rh).data; g = new Float32Array(rw * rh);
-      const k = ust.paWyrownaj && f.zr && f.zr.d > 0.01 ? ogr(Dd / f.zr.d, 0.8, 1.25) : 1, jas = f.jasnosc / 200;
-      for (let j = 0; j < g.length; j++) {
-        let q = (d[j*4] * 0.299 + d[j*4+1] * 0.587 + d[j*4+2] * 0.114) / 255;
-        if (ust.paWyrownaj && f.zr) q = (q - f.zr.m) * k + M;
-        g[j] = ogr(q + jas, 0, 1);
+      const pelny = paSzare(f, ow, oh);
+      const dopasuj = ust.paWyrownaj && f.zr;
+      const k = dopasuj && f.zr.d > 0.01 ? ogr(Dd / f.zr.d, 0.8, 1.25) : 1, jas = f.jasnosc / 200;
+      for (let yy = 0; yy < rh; yy++) {
+        const wy = ry + yy;
+        for (let xx = 0; xx < rw; xx++) {
+          const w = wagi[pion ? xx : yy]; if (!w) continue;
+          const idx = wy * ow + rx + xx;
+          let q = pelny[idx];
+          if (dopasuj) q = (q - f.zr.m) * k + M;
+          v[idx] += ogr(q + jas, 0, 1) * w; ws[idx] += w;
+        }
       }
-    } else g = new Float32Array(rw * rh).fill(ekran ? 0.82 : 1);   // pasek bez zdjęcia: na ekranie szary
-    for (let yy = 0; yy < rh; yy++) for (let xx = 0; xx < rw; xx++) {
-      const w = wagi[pion ? xx : yy]; if (!w) continue;
-      const k = (ry + yy) * ow + rx + xx; v[k] += g[yy * rw + xx] * w; ws[k] += w;
+    } else {
+      const pusty = ekran ? 0.82 : 1;
+      for (let yy = 0; yy < rh; yy++) for (let xx = 0; xx < rw; xx++) {
+        const w = wagi[pion ? xx : yy]; if (!w) continue;
+        const idx = (ry + yy) * ow + rx + xx; v[idx] += pusty * w; ws[idx] += w;
+      }
     }
   });
   const im = new ImageData(ow, oh), d = im.data;
@@ -365,7 +375,7 @@ $('pa-zrob').addEventListener('click', () => {  // z powrotem do aparatu, z tym 
   pa.krok = Math.max(0, pa.lista.indexOf(paPasek(pa.wybrany))); zamknijWarstwe();
 });
 function paWyczysc() {                          // wszystkie zdjęcia pasków znikają; kierunek i liczba pasków zostają
-  pa.cofnij = []; pa.ponow = []; paStart(pa.lista.length); paSprzataj(); paZapiszTeraz();
+  pa.cofnij = []; pa.ponow = []; pa.cache.clear(); paStart(pa.lista.length); paSprzataj(); paZapiszTeraz();
 }
 dwaRazy('pa-wyczysc', 'Wyczyść', () => { paWyczysc(); zamknijWarstwe(); });   // z powrotem do aparatu
 dwaRazy('pa-wyczysc2', 'Wyczyść', () => { paWyczysc(); paNakladka(); });
@@ -374,9 +384,7 @@ $('pa-dalej').addEventListener('click', async () => {
   if (pa.lista.some(f => !f.img)) return;
   const im = paZloz(2 * W), x = platno(im.width, im.height);   // dwa piksele na kropkę: kropki liczy potem rdzen.js
   x.putImageData(im, 0, 0);
-  const src = x.canvas.toDataURL('image/jpeg', 0.9);
-  obrazy.set(src, await createImageBitmap(x.canvas));
-  apPokaz(src, 'Paski');
+  apPokaz(await zPlotna(x.canvas, 0.9), 'Paski');
 });
 new ResizeObserver(paOdrysuj).observe(pp.parentElement);
 
@@ -386,24 +394,30 @@ async function paZapiszTeraz() {                // ta sama baza co w czesci.js, 
   clearTimeout(pa.zapisT); pa.zapisT = 0;
   try {
     const db = await czBaza(), t = db.transaction('stan', 'readwrite');
-    t.objectStore('stan').put({ kier:pa.kier, lista:pa.lista.map(({ img, ...reszta }) => reszta), nr:pa.nr, krok:pa.krok }, 'paski');
+    t.objectStore('stan').put({
+      kier:pa.kier,
+      lista:pa.lista.map(({ img, src, ...reszta }) => ({ ...reszta, plik:src ? (bloby.get(src) || src) : null })),
+      nr:pa.nr, krok:pa.krok,
+    }, 'paski');
     t.oncomplete = () => db.close();
   } catch (e) { log(`Paski: nie zapisano (${e.name})`); }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && pa.zapisT) paZapiszTeraz(); });
-addEventListener('DOMContentLoaded', async () => {   // po wszystkich skryptach, bo wczytajSrc jest w ekran.js
+addEventListener('DOMContentLoaded', async () => {   // po wszystkich skryptach, bo wczytajZapisanyObraz jest w ekran.js
   try {
     const db = await czBaza(), t = db.transaction('stan', 'readonly');
     const z = await new Promise((ok, zle) => { const r = t.objectStore('stan').get('paski'); r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
     db.close();
-    if (!z || !z.lista || !z.lista.length || paZdjec() || pa.cofnij.length) return;   // ktoś już zaczął robić paski
+    if (!z || !z.lista || !z.lista.length || paZdjec() || pa.cofnij.length) return;
     const lista = [];
     for (const f of z.lista) {
-      let img = null;
-      if (f.src) { try { await wczytajSrc(f.src); img = obrazy.get(f.src); pa.moje.add(f.src); } catch {} }
-      lista.push({ ...f, src:img ? f.src : null, img });
+      let src = null, img = null;
+      const dane = f.plik || f.src;
+      if (dane) { try { src = await wczytajZapisanyObraz(dane); img = obrazy.get(src); pa.moje.add(src); } catch {} }
+      const { plik:fp, ...fReszta } = f;
+      lista.push({ ...fReszta, src:img ? src : null, img });
     }
-    if (paZdjec() || pa.cofnij.length) return;
+    if (paZdjec() || pa.cofnij.length) { for (const f of lista) if (f.src) usunObraz(f.src); return; }
     pa.kier = z.kier === 'pionowe' ? 'pionowe' : 'poziome'; pa.lista = lista; paRowno();
     pa.nr = Math.max(z.nr | 0, ...lista.map(f => f.id + 1), 1);
     pa.krok = Math.min(z.krok | 0, lista.length - 1); pa.wybrany = lista[0].id;

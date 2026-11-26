@@ -1,6 +1,6 @@
 'use strict';
 /* ======================= STAŁE I STAN ======================= */
-const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.8 (2026-11-26)';
+const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.9 (2026-11-26)';
 const PUNKTY_NA_CM = 80;                      // 384 punkty = 48 mm druku
 const $ = id => document.getElementById(id);
 /* Kandydaci: najpierw rodziny Androida, potem Windows. Na ekranie pojawią się tylko te, które na danym urządzeniu
@@ -11,20 +11,30 @@ const KANDYDACI = [['sans-serif','Zwykła'],['serif','Szeryfowa'],['monospace','
   ['serif-monospace','Stara maszyna'],['sans-serif-smallcaps','Kapitaliki'],
   ...['Arial Black','Bahnschrift','Cambria','Comic Sans MS','Consolas','Courier New','Franklin Gothic Medium','Gabriola','Georgia',
     'Impact','Ink Free','Palatino Linotype','Segoe Print','Segoe Script','Times New Roman','Verdana'].map(n => [n, n])];
-const DOMYSLNE = { energy:16000, speed:32, copies:1, feed:128, feedMode:'lines', delay:15, pakiet:0,   // 0 = cała ramka w jednym zapisie (sprawdzone na telefonie)
-  apStyl:'fs', apJasnosc:0,                    // ostatni styl i jasność w aparacie
+const DOMYSLNE = { energy:16000, speed:32, copies:1, feed:128, feedMode:'lines', delay:15, pakiet:0, urzId:'',   // 0 = cała ramka w jednym zapisie
+  apStyl:'fs', apJasnosc:0, apKontrast:1.2, apZegar:false,   // ostatni styl, jasność, kontrast i samowyzwalacz w aparacie
   apTryb:'zdjecie', twPorady:true, twSzew:'miekki', twWyrownaj:true,     // twarz z trzech zdjęć (twarz.js)
   wyPorady:true, czMiekki:true, czRownajZdjecia:false,    // twarz z części (czesci.js)
   paPorady:true, paMiekki:false, paWyrownaj:false };      // paski (paski.js)
 let bloki = [], ust = { ...DOMYSLNE }, nrBloku = 1, dokument = { h:0, px:new Uint8Array(0) };
 const obrazy = new Map();                     // src -> ImageBitmap
+const bloby = new Map();                      // src -> Blob (do lekkiego zapisu w IndexedDB zamiast Base64)
 const cache = new Map();                      // id  -> {klucz, wynik}
+
+function usunObraz(src) {
+  if (!src) return;
+  const bmp = obrazy.get(src);
+  if (bmp) { try { bmp.close(); } catch {} obrazy.delete(src); }
+  if (bloby.delete(src) && src.startsWith('blob:')) URL.revokeObjectURL(src);
+}
 
 const nowyTekst = () => ({ id:nrBloku++, type:'text', text:'', font:'sans-serif', size:40, bold:false, italic:false,
   align:'left', line:1.2, fit:false, banner:false, invert:false });
 const nowyOdstep = () => ({ id:nrBloku++, type:'space', h:32, line:'none' });
 const noweZdjecie = (src, name) => ({ id:nrBloku++, type:'image', src, name, crop:{x:0,y:0,w:1,h:1}, rot:0, mirror:false, width:100,
   align:'center', bright:0, contrast:1.2, gamma:1.35, dither:'fs', threshold:128, cell:6, invert:false });
+const nowyQr = (dane = {}) => ({ id:nrBloku++, type:'qr', tryb:'tekst', text:'', ssid:'', haslo:'', szyfr:'WPA', ukryta:false,
+  podpis:false, pokazHaslo:false, width:65, align:'center', ...dane });
 
 /* ======================= RENDEROWANIE BLOKÓW ======================= */
 function platno(w, h) {
@@ -70,6 +80,10 @@ function doBitow(x, prog) {
   for (let i = 0; i < px.length; i++) px[i] = (d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114) < prog ? 1 : 0;
   return px;
 }
+function maxRozmiarBaneru(b) {
+  const n = Math.max(1, b.text.replace(/\t/g, '    ').replace(/\s+$/, '').split('\n').length);
+  return Math.max(6, Math.floor(W / (n * Math.max(1.15, b.line))));
+}
 function rysujTekst(b) {
   const tekst = b.text.replace(/\t/g, '    ').replace(/\s+$/, '');
   if (!tekst.trim()) return { h:0, px:new Uint8Array(0) };
@@ -77,15 +91,15 @@ function rysujTekst(b) {
   const szer = ls => Math.max(1, ...ls.map(l => pomiar.measureText(l).width));
   const bezZawijania = b.fit || b.banner;
   if (b.banner) {
-    const n = tekst.split('\n').length, pelny = W / (n * Math.max(1.15, b.line));
-    size = Math.max(6, Math.floor(b.fit ? pelny : Math.min(size, pelny)));
+    const pelny = maxRozmiarBaneru(b);
+    size = b.fit ? pelny : Math.min(size, pelny);
   } else if (b.fit) {
     pomiar.font = opisCzcionki(b, 100);
     size = Math.max(6, Math.min(600, Math.floor(100 * (W - 4) / szer(tekst.split('\n')))));
   }
   pomiar.font = opisCzcionki(b, size);
   linie = zawin(pomiar, tekst, bezZawijania ? Infinity : W);
-  const m = pomiar.measureText('Ąg'), asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
+  const m = pomiar.measureText('Ąg'), asc = m.fontBoundingBoxAscent || size * 0.8, desc = m.fontBoundingBoxDescent || size * 0.22;
   const lh = size * b.line, zapas = Math.max(0, (asc + desc - lh) / 2);
   const wys = Math.ceil(lh * linie.length + 2 * zapas);
   const cw = b.banner ? Math.min(MAXH, Math.ceil(szer(linie)) + 8) : W;
@@ -166,6 +180,28 @@ function rysujZdjecie(b) {
   for (let y = 0; y < th; y++) px.set(maly.subarray(y * tw, (y + 1) * tw), y * W + off);
   return { h:th, px };
 }
+function rysujQr(b) {
+  const kod = generujQr(tekstDlaQr(b));
+  if (!kod) return { h:0, px:new Uint8Array(0) };
+  const { N, s } = kod, marg = 2, cel = Math.max(60, Math.round(W * b.width / 100));
+  const m = Math.max(1, Math.floor(cel / (N + 2 * marg))), bok = N * m, calosc = (N + 2 * marg) * m;
+  const x0 = (b.width >= 100 || b.align === 'center' ? (W - calosc) >> 1 : b.align === 'left' ? 0 : W - calosc) + marg * m;
+  const pxKod = new Uint8Array(W * calosc);
+  for (let my = 0; my < N; my++) for (let mx = 0; mx < N; mx++) {
+    if (!s[my * N + mx]) continue;
+    const py0 = (my + marg) * m, pxStart = x0 + mx * m;
+    for (let dy = 0; dy < m; dy++) pxKod.fill(1, (py0 + dy) * W + pxStart, (py0 + dy) * W + pxStart + m);
+  }
+  const czesci = [{ h:calosc, px:pxKod }];
+  if (b.podpis) {
+    const linie = b.tryb === 'wifi'
+      ? [`Wi‑Fi: ${b.ssid.trim()}`, ...(b.pokazHaslo && b.szyfr !== 'nopass' && b.haslo ? [`Hasło: ${b.haslo}`] : [])]
+      : [b.text.trim()];
+    const opis = linie.filter(Boolean).join('\n');
+    if (opis) czesci.push(rysujTekst({ ...nowyTekst(), text:opis, size:22, align:b.width < 100 ? b.align : 'center', line:1.2 }));
+  }
+  return czesci.length > 1 ? zloz(czesci) : czesci[0];
+}
 function rysujOdstep(b) {
   const px = new Uint8Array(W * b.h), srodek = Math.max(0, (b.h >> 1) - 1);
   if (b.line !== 'none') for (let y = srodek; y < Math.min(b.h, srodek + 2); y++)
@@ -173,10 +209,10 @@ function rysujOdstep(b) {
   return { h:b.h, px };
 }
 function rysujBlok(b) {
-  const klucz = JSON.stringify({ ...b, src:b.src && b.src.length }) + (b.src ? obrazy.has(b.src) : '');
+  const klucz = JSON.stringify(b) + (b.src ? obrazy.has(b.src) : '');
   const c = cache.get(b.id);
   if (c && c.klucz === klucz) return c.wynik;
-  const wynik = b.type === 'text' ? rysujTekst(b) : b.type === 'image' ? rysujZdjecie(b) : rysujOdstep(b);
+  const wynik = b.type === 'text' ? rysujTekst(b) : b.type === 'image' ? rysujZdjecie(b) : b.type === 'qr' ? rysujQr(b) : rysujOdstep(b);
   cache.set(b.id, { klucz, wynik });
   return wynik;
 }

@@ -13,7 +13,7 @@ const CZESCI = [
   ['Oczy i nos', 'Brwi tuż pod górną kreską, koniec nosa nad dolną.'],
   ['Usta i broda', 'Nos tuż nad kreską, broda na dole konturu.'],
 ];
-const tw = { zdj:[null, null, null], krok:0, wybrany:0, chwyt:null, zaplanowane:0, napewno:0 };
+const tw = { zdj:[null, null, null], cache:[null, null, null], krok:0, wybrany:0, chwyt:null, zaplanowane:0, napewno:0 };
 
 /* ======================= RAMKA I KONTUR ======================= */
 function ramaDla(w, h) {                       // największa ramka 3:4 na środku obrazu, z małym marginesem; w ułamkach obrazu
@@ -100,9 +100,9 @@ $('tw-krok-przycisk').addEventListener('click', () => {
   if (tw.krok === 0) return;
   tw.krok--; usunZdjecie(tw.krok); twNakladka();
 });
-function usunZdjecie(i) { if (tw.zdj[i]) obrazy.delete(tw.zdj[i].src); tw.zdj[i] = null; }
+function usunZdjecie(i) { if (tw.zdj[i]) usunObraz(tw.zdj[i].src); tw.zdj[i] = tw.cache[i] = null; }
 function twUjecie(src, rama) {                  // zdjęcie bieżącego fragmentu (spust, aparat telefonu albo galeria)
-  if (warstwa !== 'aparat') { obrazy.delete(src); return; }
+  if (warstwa !== 'aparat') { usunObraz(src); return; }
   usunZdjecie(tw.krok);
   tw.zdj[tw.krok] = { src, img:obrazy.get(src), rama, dx:0, dy:0, s:1, jasnosc:0 };
   tw.wybrany = tw.krok;
@@ -115,7 +115,7 @@ function twZPliku(src) { const img = obrazy.get(src); twUjecie(src, ramaDla(img.
 function twWyczysc() { for (let i = 0; i < 3; i++) usunZdjecie(i); tw.krok = tw.wybrany = 0; }
 
 function twWarstwa(w) {                         // wywoływane z ustawWarstwe po apWarstwa
-  const t = ust.apTryb === 'twarz', zKilku = ust.apTryb !== 'zdjecie';   // zKilku: tu albo w czesci.js
+  const t = ust.apTryb === 'twarz', zKilku = ust.apTryb !== 'zdjecie';   // zKilku: tu albo w czesci.js/paski.js
   $('twarz').hidden = w !== 'twarz';
   for (const p of $('ap-tryby').children) p.setAttribute('aria-pressed', p.dataset.tryb === ust.apTryb);
   if (w === 'aparat') $('ap-telefon').hidden = zKilku;
@@ -161,11 +161,16 @@ function wyrownajJasnosc(a, b, s, pol, ow, oh) {       // dolne zdjęcie b dosta
 }
 function zlozTwarz(ow) {                        // wynik: ImageData w odcieniach szarości, szerokość ow, proporcje ramki 3:4
   const oh = Math.round(ow / 0.75), n = ow * oh;
-  const szare = tw.zdj.map(f => {
-    const x = platno(ow, oh); x.imageSmoothingQuality = 'high'; rysujFragment(x, f, 0, 0, ow, oh);
-    const d = x.getImageData(0, 0, ow, oh).data, g = new Float32Array(n);
-    for (let i = 0; i < n; i++) g[i] = (d[i*4] * 0.299 + d[i*4+1] * 0.587 + d[i*4+2] * 0.114) / 255;
-    return g;
+  const szare = tw.zdj.map((f, idx) => {
+    const klucz = `${f.src}|${f.dx}|${f.dy}|${f.s}|${ow}`;
+    let c = tw.cache[idx];
+    if (!c || c.klucz !== klucz) {
+      const x = platno(ow, oh); x.imageSmoothingQuality = 'high'; rysujFragment(x, f, 0, 0, ow, oh);
+      const d = x.getImageData(0, 0, ow, oh).data, g = new Float32Array(n);
+      for (let i = 0; i < n; i++) g[i] = (d[i*4] * 0.299 + d[i*4+1] * 0.587 + d[i*4+2] * 0.114) / 255;
+      c = tw.cache[idx] = { klucz, g };
+    }
+    return Float32Array.from(c.g);
   });
   const szew = SZEW.map(v => v * oh), b = ust.twSzew === 'miekki' ? ZAKLADKA * ow : 0;
   if (ust.twWyrownaj) for (let i = 1; i < 3; i++) wyrownajJasnosc(szare[i - 1], szare[i], szew[i - 1], Math.max(b, oh * 0.03), ow, oh);
@@ -240,8 +245,6 @@ $('tw-dalej').addEventListener('click', async () => {
   if (!tw.zdj.every(Boolean)) return;
   const im = zlozTwarz(2 * W), x = platno(im.width, im.height);   // dwa piksele na kropkę: kropki liczy potem rdzen.js
   x.putImageData(im, 0, 0);
-  const src = x.canvas.toDataURL('image/jpeg', 0.9);
-  obrazy.set(src, await createImageBitmap(x.canvas));
-  apPokaz(src, 'Twarz z trzech zdjęć');
+  apPokaz(await zPlotna(x.canvas, 0.9), 'Twarz z trzech zdjęć');
 });
 new ResizeObserver(odrysujDopasowanie).observe($('tw-podglad').parentElement);

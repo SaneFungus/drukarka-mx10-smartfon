@@ -2,7 +2,7 @@
   "id": "./",
   "name": "MX10 – smartfon",
   "short_name": "MX10",
-  "description": "Druk własnego tekstu i zdjęć na drukarce termicznej MX10",
+  "description": "Druk własnego tekstu, kodów QR i zdjęć na drukarce termicznej MX10",
   "lang": "pl",
   "start_url": "./",
   "scope": "./",
@@ -12,6 +12,19 @@
   "shortcuts": [
     { "name": "Aparat", "url": "./?aparat", "icons": [{ "src": "ikony/ikona-192.png", "sizes": "192x192", "type": "image/png" }] }
   ],
+  "share_target": {
+    "action": "./?udostepnione=1",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        { "name": "zdjecia", "accept": ["image/*"] }
+      ]
+    }
+  },
   "icons": [
     { "src": "ikony/ikona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "ikony/ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
