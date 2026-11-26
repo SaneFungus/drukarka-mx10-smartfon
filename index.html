@@ -107,9 +107,12 @@
   <div class="foto-gora"><button class="ikona" id="ap-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button>
     <div class="foto-gora-prawa"><button id="ap-porady" hidden>Porady</button><button id="tw-galeria" hidden>Z galerii</button><button id="ap-telefon">Aparat telefonu</button></div></div>
   <div class="foto-srodek" id="ap-zywo">
+    <div id="pa-krok" hidden role="status"><p><strong id="pa-krok-tytul">Pasek 1 z 3</strong><span id="pa-krok-rada"></span></p>
+      <div class="cz-przyciski" id="pa-krok-przyciski"><button id="pa-wyczysc2">Wyczyść</button><button id="pa-uloz">Ułóż</button></div></div>
     <div class="kadr-pole">
       <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
       <canvas id="tw-nakladka" hidden aria-hidden="true"></canvas>
+      <canvas id="pa-nakladka" hidden aria-hidden="true"></canvas>
       <div id="cz-krok" hidden role="status"><p><strong id="cz-krok-tytul">Z części</strong><span id="cz-krok-rada"></span></p>
         <div class="cz-przyciski" id="cz-krok-przyciski"><button id="cz-wyczysc2">Wyczyść</button><button id="cz-anuluj" hidden>Anuluj</button><button id="cz-uloz">Ułóż</button></div></div>
       <div id="tw-krok" hidden role="status"><p><strong id="tw-krok-nr"></strong><span id="tw-krok-rada"></span></p><button id="tw-krok-przycisk" hidden></button></div>
@@ -138,9 +141,24 @@
         </ul>
         <button class="glowny" id="cz-zaczynam">Zaczynam</button>
       </div>
+      <div id="pa-porady" hidden>
+        <p class="tytul">Paski</p>
+        <p>Obraz składa się z pasków, a każdy pasek pochodzi z innego zdjęcia.</p>
+        <ul>
+          <li>Na dole wybierz paski poziome albo pionowe i ich liczbę.</li>
+          <li>Różowa ramka pokazuje pasek, który teraz fotografujesz. Zrobione paski widać w tych samych miejscach, więc łatwo dopasować do nich twarz.</li>
+          <li>Dotknij innego paska, żeby zrobić go teraz.</li>
+          <li>Każde zdjęcie paska od razu zapisuje się w telefonie. Zapamiętane jest całe zdjęcie, więc po poszerzeniu paska widać więcej tego samego ujęcia.</li>
+          <li>Przy układaniu przeciągnij granicę między paskami, żeby zmienić ich szerokość. Paski można też dodawać i usuwać.</li>
+          <li>Strzałki u góry cofają i ponawiają każdą zmianę. „Wyczyść” usuwa wszystkie zdjęcia pasków.</li>
+        </ul>
+        <button class="glowny" id="pa-zaczynam">Zaczynam</button>
+      </div>
     </div>
     <div class="foto-dol spusty">
-      <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button><button data-tryb="czesci">Z części</button></div>
+      <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button><button data-tryb="czesci">Z części</button><button data-tryb="paski">Paski</button></div>
+      <div class="pa-ustaw" id="pa-ustaw" hidden><div class="pa-kier" role="group" aria-label="Kierunek pasków"><button data-kier="poziome">Poziome</button><button data-kier="pionowe">Pionowe</button></div>
+        <div class="kopie"><button id="pa-mniej" aria-label="Mniej pasków">−</button><output id="pa-ile" aria-label="Liczba pasków">3</output><button id="pa-wiecej" aria-label="Więcej pasków">+</button></div></div>
       <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
       <button id="ap-spust" aria-label="Zrób zdjęcie" disabled></button>
       <button class="ikona" id="ap-zamien" aria-label="Przełącz aparat przedni i tylny" hidden><svg><use href="#i-zamien"/></svg></button>
@@ -206,6 +224,22 @@
   </div>
 </div>
 
+<div id="paski" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Układanie pasków">
+  <div class="foto-gora"><button class="ikona" id="pa-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><p class="tw-tytul">Paski</p>
+    <div class="foto-gora-prawa"><button class="ikona" id="pa-cofnij" aria-label="Cofnij" disabled><svg><use href="#i-cofnij"/></svg></button><button class="ikona" id="pa-ponow" aria-label="Ponów" disabled><svg><use href="#i-ponow"/></svg></button></div></div>
+  <div class="foto-srodek">
+    <div class="kadr-pole"><canvas id="pa-podglad" width="384" height="512" role="img" aria-label="Obraz złożony z pasków"></canvas></div>
+    <div class="foto-dol">
+      <p class="podp" id="pa-rada"></p>
+      <div class="chipy" id="pa-wybor" role="group" aria-label="Paski po kolei"></div>
+      <div class="chipy" id="pa-suwaki" role="group" aria-label="Wybrany pasek"><button data-suwak="szerokosc">Szerokość</button><button data-suwak="rozmiar">Rozmiar</button><button data-suwak="jasnosc">Jasność</button><button id="pa-dodaj">Dodaj pasek</button><button id="pa-usun">Usuń pasek</button></div>
+      <label><span class="etykieta"><span id="pa-n-suwak">Szerokość paska</span> <output id="pa-o-suwak"></output></span><input type="range" id="pa-suwak" min="2" max="90" step="1"></label>
+      <div class="chipy" id="pa-kierunki" role="group" aria-label="Wszystkie paski"><button data-kier="poziome">Poziome</button><button data-kier="pionowe">Pionowe</button><button id="pa-rowne">Równe paski</button><button id="pa-miekki">Miękki brzeg</button><button id="pa-wyrownaj">Wyrównaj jasność</button><button id="pa-wyczysc">Wyczyść</button></div>
+      <div class="rzad"><button id="pa-zrob">Zrób zdjęcie paska 1</button><button class="glowny" id="pa-dalej">Dalej</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="kadrowanie" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
   <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
   <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
@@ -222,6 +256,7 @@
 <script src="aparat.js"></script>
 <script src="twarz.js"></script>
 <script src="czesci.js"></script>
+<script src="paski.js"></script>
 <script src="ekran.js"></script>
 </body>
 </html>

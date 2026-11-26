@@ -4,9 +4,10 @@
    Warstwa 'aparat' = obraz na żywo, warstwa 'zdjecie' = zrobione zdjęcie (obsługa Wstecz w ekran.js). */
 const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0, z:'aparat' };
 /* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie, aparat -> twarz -> zdjęcie (twarz.js)
-   albo aparat -> [wytnij] -> czesci -> [wytnij z bazowego] -> zdjęcie (czesci.js). ap.z = warstwa, z której przyszło zdjęcie. */
+   albo aparat -> [wytnij] -> czesci -> [wytnij z bazowego] -> zdjęcie (czesci.js), albo aparat -> paski -> zdjęcie (paski.js).
+   ap.z = warstwa, z której przyszło zdjęcie. */
 const apGlebia = () => warstwa === 'zdjecie' ? (ap.z === 'aparat' ? 2 : ap.z === 'czesci' ? 1 + czGlebia() : 3)
-  : warstwa === 'czesci' ? czGlebia() : warstwa === 'wytnij' ? wyGlebia() : warstwa === 'twarz' ? 2 : 1;
+  : warstwa === 'czesci' ? czGlebia() : warstwa === 'wytnij' ? wyGlebia() : warstwa === 'twarz' || warstwa === 'paski' ? 2 : 1;
 
 /* ======================= OBRAZ NA ŻYWO ======================= */
 function apZatrzymaj() {
@@ -63,7 +64,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ======================= ZROBIONE ZDJĘCIE ======================= */
 function apPokaz(src, nazwa = 'Zdjęcie z aparatu') {
-  if (!['aparat', 'twarz', 'czesci'].includes(warstwa)) { obrazy.delete(src); return; }
+  if (!['aparat', 'twarz', 'czesci', 'paski'].includes(warstwa)) { obrazy.delete(src); return; }
   ap.z = warstwa;
   ap.b = { ...noweZdjecie(src, nazwa), dither:ust.apStyl, bright:ust.apJasnosc };
   ap.od = performance.now();
@@ -95,6 +96,7 @@ $('ap-spust').addEventListener('click', async () => {
     const src = await zObrazu(v, v.videoWidth, v.videoHeight, apMax());
     if (ust.apTryb === 'twarz') twUjecie(src, ramaDla(v.videoWidth, v.videoHeight));
     else if (ust.apTryb === 'czesci') czZdjecie(src);
+    else if (ust.apTryb === 'paski') paZdjecie(src);
     else apPokaz(src);
   }
   catch { apInfo('Nie udało się zrobić zdjęcia. Spróbuj jeszcze raz.'); setTimeout(() => apInfo(''), 3000); }
@@ -110,7 +112,7 @@ for (const id of ['ap-telefon', 'ap-telefon2']) $(id).addEventListener('click', 
 $('aparat').addEventListener('cancel', () => { if (warstwa === 'aparat' && !ap.strumien) apUruchom(); });
 $('aparat').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const src = await zPliku(f, apMax()); apZatrzymaj(); if (ust.apTryb === 'twarz') twZPliku(src); else if (ust.apTryb === 'czesci') czZdjecie(src); else apPokaz(src); }
+  try { const src = await zPliku(f, apMax()); apZatrzymaj(); if (ust.apTryb === 'twarz') twZPliku(src); else if (ust.apTryb === 'czesci') czZdjecie(src); else if (ust.apTryb === 'paski') paZdjecie(src); else apPokaz(src); }
   catch { apZatrzymaj(); apInfo('Nie udało się odczytać tego zdjęcia.', true); }
 });
 

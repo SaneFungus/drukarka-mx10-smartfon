@@ -1,6 +1,6 @@
 'use strict';
 /* ======================= STAŁE I STAN ======================= */
-const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.7 (2026-11-26)';
+const W = 384, WB = W / 8, MAXH = 30000, KLUCZ = 'mx10-smartfon-v1', WERSJA = 'smartfon 0.8 (2026-11-26)';
 const PUNKTY_NA_CM = 80;                      // 384 punkty = 48 mm druku
 const $ = id => document.getElementById(id);
 /* Kandydaci: najpierw rodziny Androida, potem Windows. Na ekranie pojawią się tylko te, które na danym urządzeniu
@@ -14,7 +14,8 @@ const KANDYDACI = [['sans-serif','Zwykła'],['serif','Szeryfowa'],['monospace','
 const DOMYSLNE = { energy:16000, speed:32, copies:1, feed:128, feedMode:'lines', delay:15, pakiet:0,   // 0 = cała ramka w jednym zapisie (sprawdzone na telefonie)
   apStyl:'fs', apJasnosc:0,                    // ostatni styl i jasność w aparacie
   apTryb:'zdjecie', twPorady:true, twSzew:'miekki', twWyrownaj:true,     // twarz z trzech zdjęć (twarz.js)
-  wyPorady:true, czMiekki:true, czRownajZdjecia:false };   // twarz z części (czesci.js)
+  wyPorady:true, czMiekki:true, czRownajZdjecia:false,    // twarz z części (czesci.js)
+  paPorady:true, paMiekki:false, paWyrownaj:false };      // paski (paski.js)
 let bloki = [], ust = { ...DOMYSLNE }, nrBloku = 1, dokument = { h:0, px:new Uint8Array(0) };
 const obrazy = new Map();                     // src -> ImageBitmap
 const cache = new Map();                      // id  -> {klucz, wynik}
