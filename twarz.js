@@ -126,7 +126,9 @@ function twWarstwa(w) {                         // wywoływane z ustawWarstwe po
 }
 $('ap-tryby').addEventListener('click', e => {
   const p = e.target.closest('[data-tryb]'); if (!p) return;
+  const bylo = JSON.stringify(apRozdzielczosc());
   ust.apTryb = p.dataset.tryb; zapisz(); twWarstwa(warstwa); czWarstwa(warstwa);
+  if (warstwa === 'aparat' && ap.strumien && JSON.stringify(apRozdzielczosc()) !== bylo) apUruchom();   // "Z części" chce ostrzejszego obrazu
 });
 $('ap-porady').addEventListener('click', () => {
   const id = ust.apTryb === 'czesci' ? 'cz' : 'tw';
@@ -136,7 +138,7 @@ $('tw-zaczynam').addEventListener('click', () => { ust.twPorady = false; zapisz(
 $('tw-galeria').addEventListener('click', () => $('tw-plik').click());
 $('tw-plik').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const src = await zPliku(f); if (ust.apTryb === 'czesci') czZPliku(src); else twZPliku(src); }
+  try { const src = await zPliku(f, apMax()); if (ust.apTryb === 'czesci') czZdjecie(src); else twZPliku(src); }
   catch { apInfo('Nie udało się odczytać tego zdjęcia.'); setTimeout(() => apInfo(''), 3000); }
 });
 for (const t of ['loadedmetadata', 'resize']) $('ap-wideo').addEventListener(t, twNakladka);

@@ -127,8 +127,8 @@ nav button.glowny[aria-selected=true]{box-shadow:inset 0 0 0 3px var(--marker-te
 .foto-gora-prawa{display:flex;gap:8px;min-width:0}
 .tryby{grid-column:1 / -1;display:flex;gap:8px;justify-content:center;margin-bottom:10px}
 .tryby button{min-height:44px}
-#tw-nakladka,#cz-nakladka{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#tw-nakladka.lustro,#cz-nakladka.lustro{transform:scaleX(-1)}
+#tw-nakladka{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#tw-nakladka.lustro{transform:scaleX(-1)}
 #tw-krok,#cz-krok{position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;gap:8px;background:rgba(20,23,26,.8);border-radius:12px;padding:6px 6px 6px 12px}
 #tw-krok p,#cz-krok p{margin:0;flex:1 1 0;min-width:0;font-size:14px;line-height:1.3}
 #tw-krok strong,#cz-krok strong{display:block;font-size:16px}
@@ -140,15 +140,18 @@ nav button.glowny[aria-selected=true]{box-shadow:inset 0 0 0 3px var(--marker-te
 #tw-porady button,#cz-porady button{min-height:56px;margin-top:auto;flex:none}
 .tw-tytul{margin:0;align-self:center;font-weight:600;min-width:0}
 #tw-podglad,#cz-podglad{display:block;touch-action:none;background:#fdfdfb;cursor:grab}
-#twarz .podp,#czesci .podp{text-align:center;margin:0 0 6px}
-#twarz .foto-dol .rzad,#czesci .foto-dol .rzad{margin-top:4px}
-#twarz .foto-dol .rzad>button,#czesci .foto-dol .rzad>button{min-height:56px}
+#wy-zdjecie{display:block;touch-action:none;cursor:crosshair}
+#twarz .podp,#czesci .podp,#wytnij .podp{text-align:center;margin:0 0 6px}
+#twarz .foto-dol .rzad,#czesci .foto-dol .rzad,#wytnij .foto-dol .rzad{margin-top:4px}
+#twarz .foto-dol .rzad>button,#czesci .foto-dol .rzad>button,#wytnij .foto-dol .rzad>button{min-height:56px}
 #cz-krok{flex-wrap:wrap}
 #cz-krok p{flex:1 1 170px}
 .cz-przyciski{display:flex;gap:6px;margin-left:auto}
-#cz-wstecz{min-width:44px;padding:0 10px;font-size:20px}
-#cz-ustaw .chipy,#cz-kartka .chipy{margin-bottom:4px}
-#tw-dalej,#cz-dalej{flex:1.6 1 0;font-size:18px}
+.cz-przyciski[hidden]{display:none}
+#cz-ustaw .chipy,#cz-kartka{margin-bottom:4px}
+.wy-czesci{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.wy-czesci button{min-height:44px;padding:0 4px;font-size:14px}
+#tw-dalej,#cz-dalej,#wy-uloz{flex:1.6 1 0;font-size:18px}
 .foto-stan{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .foto-stan p{margin:8px 0 0;font-size:15px}
 .foto-stan p:empty{display:none}

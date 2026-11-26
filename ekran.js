@@ -96,7 +96,7 @@ new ResizeObserver(() => { rozmiarPodgladu(); rysujRamke(); }).observe($('stol')
 let warstwa = null, wraca = false;
 function ustawWarstwe(w) {
   warstwa = w;
-  $('app').inert = w === 'kadr' || w === 'aparat' || w === 'zdjecie' || w === 'twarz' || w === 'czesci';   // to, co pod spodem, nie reaguje
+  $('app').inert = w === 'kadr' || w === 'aparat' || w === 'zdjecie' || w === 'twarz' || w === 'wytnij' || w === 'czesci';   // to, co pod spodem, nie reaguje
   document.body.classList.toggle('pelny', w === 'pelny');
   $('kadrowanie').hidden = w !== 'kadr';
   $('zoom').hidden = w !== 'pelny';
@@ -109,7 +109,7 @@ function ustawWarstwe(w) {
 function otworzWarstwe(w) { history.pushState({ warstwa:w }, ''); ustawWarstwe(w); }
 function zamknijWarstwe(ile = 1) { if (warstwa && !wraca) { wraca = true; history.go(-ile); } }   // wraca: szybkie drugie dotknięcie nie cofa dwa razy
 if (history.state && history.state.warstwa) history.replaceState(null, '');   // po odświeżeniu w aparacie: stary wpis nie może otworzyć warstwy
-const WSTECZ = { zdjecie:['aparat', 'twarz', 'czesci'], twarz:['aparat'], czesci:['aparat'] };   // warstwy, do których wolno wrócić przyciskiem Wstecz
+const WSTECZ = { zdjecie:['aparat', 'twarz', 'czesci'], twarz:['aparat'], wytnij:['aparat'], czesci:['aparat', 'wytnij'] };   // warstwy, do których wolno wrócić przyciskiem Wstecz
 addEventListener('popstate', e => { wraca = false; const cel = e.state && e.state.warstwa; ustawWarstwe((WSTECZ[warstwa] || []).includes(cel) ? cel : null); });
 $('pelny').addEventListener('click', () => warstwa ? zamknijWarstwe() : otworzWarstwe('pelny'));
 $('zoom').addEventListener('click', () => { powieksz = !powieksz; $('zoom').textContent = powieksz ? 'Dopasuj' : 'Powiększ 2×'; rozmiarPodgladu(); });
@@ -280,16 +280,16 @@ widok('wyglad').addEventListener('contextmenu', e => { if (e.target.closest('[da
 
 /* ======================= ZDJĘCIA ======================= */
 async function wczytajSrc(src) { if (!obrazy.has(src)) obrazy.set(src, await createImageBitmap(await (await fetch(src)).blob())); }
-async function zObrazu(obraz, w, h) {           // zmniejsza do 1200 px, zapamiętuje i zwraca adres zdjęcia
-  const skala = Math.min(1, 1200 / Math.max(w, h)), x = platno(Math.round(w * skala), Math.round(h * skala));
+async function zObrazu(obraz, w, h, max = 1200) {   // zmniejsza do max px, zapamiętuje i zwraca adres zdjęcia
+  const skala = Math.min(1, max / Math.max(w, h)), x = platno(Math.round(w * skala), Math.round(h * skala));
   x.imageSmoothingQuality = 'high'; x.drawImage(obraz, 0, 0, x.canvas.width, x.canvas.height);
   const src = x.canvas.toDataURL('image/jpeg', 0.88);
   obrazy.set(src, await createImageBitmap(x.canvas));
   return src;
 }
-async function zPliku(f) {
+async function zPliku(f, max) {
   const bmp = await createImageBitmap(f, { imageOrientation:'from-image' });
-  try { return await zObrazu(bmp, bmp.width, bmp.height); } finally { bmp.close(); }
+  try { return await zObrazu(bmp, bmp.width, bmp.height, max); } finally { bmp.close(); }
 }
 async function dodajPliki(pliki) {
   if (!pliki.length) return;

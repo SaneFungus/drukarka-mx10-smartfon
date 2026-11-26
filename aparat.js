@@ -3,9 +3,10 @@
    Zdjęcie drukuje się osobno, bez reszty treści. "Edytuj" dokłada je do wydruku w głównym ekranie.
    Warstwa 'aparat' = obraz na żywo, warstwa 'zdjecie' = zrobione zdjęcie (obsługa Wstecz w ekran.js). */
 const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0, z:'aparat' };
-/* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie albo aparat -> twarz/czesci -> zdjęcie (twarz.js, czesci.js).
-   ap.z = warstwa, z której przyszło zdjęcie. */
-const apGlebia = () => warstwa === 'zdjecie' ? (ap.z === 'aparat' ? 2 : 3) : warstwa === 'twarz' || warstwa === 'czesci' ? 2 : 1;
+/* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie, aparat -> twarz -> zdjęcie (twarz.js)
+   albo aparat -> [wytnij] -> czesci -> zdjęcie (czesci.js). ap.z = warstwa, z której przyszło zdjęcie. */
+const apGlebia = () => warstwa === 'zdjecie' ? (ap.z === 'aparat' ? 2 : ap.z === 'czesci' ? 1 + czGlebia() : 3)
+  : warstwa === 'czesci' ? czGlebia() : warstwa === 'twarz' || warstwa === 'wytnij' ? 2 : 1;
 
 /* ======================= OBRAZ NA ŻYWO ======================= */
 function apZatrzymaj() {
@@ -16,13 +17,16 @@ function apZatrzymaj() {
   $('ap-spust').disabled = true; $('ap-lampa').hidden = $('ap-zamien').hidden = true;
 }
 function apInfo(t, blad = false) { $('ap-info').hidden = !t; $('ap-info-tekst').textContent = t; $('ap-telefon2').hidden = !blad; }
+const apRozdzielczosc = () => ust.apTryb === 'czesci'   // przy wycinaniu z daleka liczy się każdy szczegół
+  ? { width:{ ideal:2560 }, height:{ ideal:1920 } } : { width:{ ideal:1600 }, height:{ ideal:1200 } };
+const apMax = () => ust.apTryb === 'czesci' ? WY_MAX : 1200;   // największy bok zapamiętanego zdjęcia
 async function apUruchom() {
   apZatrzymaj();
   const nr = ap.nr, v = $('ap-wideo');
   apInfo('Włączam aparat…');
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new DOMException('', 'NotSupportedError');
-    const s = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:ap.kier }, width:{ ideal:1600 }, height:{ ideal:1200 } } });
+    const s = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:ap.kier }, ...apRozdzielczosc() } });
     if (nr !== ap.nr) { for (const t of s.getTracks()) t.stop(); return; }
     ap.strumien = s;
     const tor = s.getVideoTracks()[0], moze = tor.getCapabilities ? tor.getCapabilities() : {};
@@ -85,12 +89,12 @@ function apRozmiar() {                          // całe zdjęcie na ekranie; gd
 const apZaWczesnie = () => performance.now() - ap.od < 400;   // drugie dotknięcie spustu nie może trafić w przycisk, który pojawił się pod palcem
 
 $('ap-spust').addEventListener('click', async () => {
-  const v = $('ap-wideo'); if (!ap.strumien || !v.videoWidth) return;
+  const v = $('ap-wideo'); if (!ap.strumien || v.videoWidth < 32) return;   // aparat dopiero się budzi
   $('ap-spust').disabled = true;
   try {
-    const src = await zObrazu(v, v.videoWidth, v.videoHeight);
+    const src = await zObrazu(v, v.videoWidth, v.videoHeight, apMax());
     if (ust.apTryb === 'twarz') twUjecie(src, ramaDla(v.videoWidth, v.videoHeight));
-    else if (ust.apTryb === 'czesci') czUjecie(src, czRama(v.videoWidth, v.videoHeight));
+    else if (ust.apTryb === 'czesci') czZdjecie(src);
     else apPokaz(src);
   }
   catch { apInfo('Nie udało się zrobić zdjęcia. Spróbuj jeszcze raz.'); setTimeout(() => apInfo(''), 3000); }
@@ -106,7 +110,7 @@ for (const id of ['ap-telefon', 'ap-telefon2']) $(id).addEventListener('click', 
 $('aparat').addEventListener('cancel', () => { if (warstwa === 'aparat' && !ap.strumien) apUruchom(); });
 $('aparat').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const src = await zPliku(f); apZatrzymaj(); if (ust.apTryb === 'twarz') twZPliku(src); else if (ust.apTryb === 'czesci') czZPliku(src); else apPokaz(src); }
+  try { const src = await zPliku(f, apMax()); apZatrzymaj(); if (ust.apTryb === 'twarz') twZPliku(src); else if (ust.apTryb === 'czesci') czZdjecie(src); else apPokaz(src); }
   catch { apZatrzymaj(); apInfo('Nie udało się odczytać tego zdjęcia.', true); }
 });
 
@@ -126,7 +130,8 @@ $('ap-powtorz').addEventListener('click', () => { if (!apZaWczesnie()) zamknijWa
 $('ap-edytuj').addEventListener('click', () => {
   if (apZaWczesnie() || !ap.b || bloki.includes(ap.b)) return;
   zapamietaj(); bloki.push(ap.b); wybrany = ap.b.id;
-  zamknijWarstwe(apGlebia()); if (ap.z === 'twarz') twWyczysc();   // części zostają w pamięci do "Od nowa"   // złożona twarz jest już w treści otworzZakladke('wyglad'); odswiezTeraz(); zapisz(); przewinDoWybranego();
+  zamknijWarstwe(apGlebia()); if (ap.z === 'twarz') twWyczysc();   // złożona twarz jest już w treści; wycinki zostają do "Wyczyść"
+  otworzZakladke('wyglad'); odswiezTeraz(); zapisz(); przewinDoWybranego();
 });
 $('ap-drukuj').addEventListener('click', async () => {
   if (apZaWczesnie() || !ap.b || drukuje) return;
