@@ -4,9 +4,9 @@
    Warstwa 'aparat' = obraz na żywo, warstwa 'zdjecie' = zrobione zdjęcie (obsługa Wstecz w ekran.js). */
 const ap = { strumien:null, nr:0, kier:'environment', lampa:false, b:null, kropki:null, od:0, zaplanowane:0, z:'aparat' };
 /* Ile kroków Wstecz zamyka cały aparat: aparat -> zdjęcie, aparat -> twarz -> zdjęcie (twarz.js)
-   albo aparat -> [wytnij] -> czesci -> zdjęcie (czesci.js). ap.z = warstwa, z której przyszło zdjęcie. */
+   albo aparat -> [wytnij] -> czesci -> [wytnij z bazowego] -> zdjęcie (czesci.js). ap.z = warstwa, z której przyszło zdjęcie. */
 const apGlebia = () => warstwa === 'zdjecie' ? (ap.z === 'aparat' ? 2 : ap.z === 'czesci' ? 1 + czGlebia() : 3)
-  : warstwa === 'czesci' ? czGlebia() : warstwa === 'twarz' || warstwa === 'wytnij' ? 2 : 1;
+  : warstwa === 'czesci' ? czGlebia() : warstwa === 'wytnij' ? wyGlebia() : warstwa === 'twarz' ? 2 : 1;
 
 /* ======================= OBRAZ NA ŻYWO ======================= */
 function apZatrzymaj() {

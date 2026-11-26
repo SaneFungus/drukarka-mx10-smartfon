@@ -14,6 +14,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="i-cofnij" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-ponow" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></symbol>
     <symbol id="i-pelny" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></symbol>
     <symbol id="i-zwin" viewBox="0 0 24 24"><path d="M19 10h-5V5M14 10l7-7M5 14h5v5M10 14l-7 7"/></symbol>
     <symbol id="i-tekst" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
@@ -109,8 +110,8 @@
     <div class="kadr-pole">
       <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
       <canvas id="tw-nakladka" hidden aria-hidden="true"></canvas>
-      <div id="cz-krok" hidden role="status"><p><strong>Z części</strong><span id="cz-krok-rada"></span></p>
-        <div class="cz-przyciski" id="cz-krok-przyciski"><button id="cz-wyczysc2">Wyczyść</button><button id="cz-uloz">Ułóż</button></div></div>
+      <div id="cz-krok" hidden role="status"><p><strong id="cz-krok-tytul">Z części</strong><span id="cz-krok-rada"></span></p>
+        <div class="cz-przyciski" id="cz-krok-przyciski"><button id="cz-wyczysc2">Wyczyść</button><button id="cz-anuluj" hidden>Anuluj</button><button id="cz-uloz">Ułóż</button></div></div>
       <div id="tw-krok" hidden role="status"><p><strong id="tw-krok-nr"></strong><span id="tw-krok-rada"></span></p><button id="tw-krok-przycisk" hidden></button></div>
       <div id="ap-info" role="status" hidden><p id="ap-info-tekst"></p><button id="ap-telefon2" hidden>Użyj aparatu telefonu</button></div>
       <div id="tw-porady" hidden>
@@ -126,14 +127,14 @@
       </div>
       <div id="cz-porady" hidden>
         <p class="tytul">Twarz z części</p>
-        <p>Z dowolnych zdjęć wycinasz palcem oczy, nos, usta, uszy czy włosy. Program ułoży je na konturze głowy.</p>
+        <p>Najpierw zdjęcie bazowe: czyjaś twarz, która zajmie całe tło. Na nią nakładasz warstwy wycięte z innych zdjęć.</p>
         <ul>
-          <li>Zrób zwykłe zdjęcie, z bliska albo z daleka, albo weź je z galerii.</li>
-          <li>Obrysuj palcem część, którą chcesz wyciąć. Dwoma palcami przybliżysz zdjęcie, żeby obrysować dokładniej.</li>
-          <li>Stuknij, co obrysowałeś, np. „Nos”. Do wyniku przejdzie tylko to, co jest w obrysie.</li>
-          <li>Z jednego zdjęcia możesz wyciąć kilka części, a z różnych zdjęć różne.</li>
-          <li>Przy układaniu przesuniesz wycinek palcem, a dwoma palcami powiększysz go i obrócisz.</li>
-          <li>Wycinki zostają w telefonie. „Wyczyść” usuwa wszystkie, żeby zacząć od nowa.</li>
+          <li>Pierwsze zdjęcie to zdjęcie bazowe. Możesz je też wziąć z galerii.</li>
+          <li>Na kolejnych zdjęciach obrysuj palcem część: oko, nos, usta, brodę, włosy. Dwoma palcami przybliżysz zdjęcie.</li>
+          <li>Stuknij, co obrysowałeś, np. „Nos”. Ta część staje się warstwą nad zdjęciem bazowym.</li>
+          <li>Warstwę przesuniesz palcem, a dwoma palcami powiększysz ją i obrócisz. „Wyżej” i „Niżej” zmieniają kolejność.</li>
+          <li>Strzałki u góry cofają i ponawiają każdą zmianę, także usunięcie warstwy.</li>
+          <li>Wszystko zostaje w telefonie. „Wyczyść” usuwa zdjęcie bazowe i warstwy, żeby zacząć od nowa.</li>
         </ul>
         <button class="glowny" id="cz-zaczynam">Zaczynam</button>
       </div>
@@ -184,18 +185,23 @@
 </div>
 
 <div id="czesci" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Układanie części twarzy">
-  <div class="foto-gora"><button class="ikona" id="cz-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><p class="tw-tytul">Ułóż części</p><button id="cz-wyczysc">Wyczyść</button></div>
+  <div class="foto-gora"><button class="ikona" id="cz-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><p class="tw-tytul">Warstwy</p>
+    <div class="foto-gora-prawa"><button class="ikona" id="cz-cofnij" aria-label="Cofnij" disabled><svg><use href="#i-cofnij"/></svg></button><button class="ikona" id="cz-ponow" aria-label="Ponów" disabled><svg><use href="#i-ponow"/></svg></button></div></div>
   <div class="foto-srodek">
-    <div class="kadr-pole"><canvas id="cz-podglad" width="384" height="512" role="img" aria-label="Twarz złożona z wycinków"></canvas></div>
+    <div class="kadr-pole"><canvas id="cz-podglad" width="384" height="512" role="img" aria-label="Zdjęcie bazowe z warstwami"></canvas></div>
     <div class="foto-dol">
       <p class="podp" id="cz-rada"></p>
-      <div class="chipy" id="cz-wybor" role="group" aria-label="Co ustawiasz"></div>
-      <div class="chipy" id="cz-kartka" role="group" aria-label="Kartka"><button id="cz-kontur">Kontur</button><button id="cz-miekki">Miękki brzeg</button><button id="cz-wyrownaj">Wyrównaj zdjęcia</button></div>
-      <div id="cz-ustaw" hidden>
-        <div class="chipy" id="cz-suwaki" role="group" aria-label="Wycinek"><button data-suwak="rozmiar">Rozmiar</button><button data-suwak="obrot">Obrót</button><button data-suwak="jasnosc">Jasność</button><button id="cz-odbij">Odbij</button><button id="cz-wierzch">Na wierzch</button></div>
-        <label><span class="etykieta"><span id="cz-n-suwak">Rozmiar</span> <output id="cz-o-suwak"></output></span><input type="range" id="cz-suwak" min="30" max="300" step="1"></label>
+      <div class="chipy" id="cz-wybor" role="group" aria-label="Warstwy, od spodu"></div>
+      <div id="cz-tlo">
+        <div class="chipy" role="group" aria-label="Zdjęcie bazowe"><button id="cz-z-bazy">Wytnij część</button><button id="cz-zmien">Zmień tło</button><button id="cz-wyczysc">Wyczyść</button></div>
+        <div class="chipy" role="group" aria-label="Wszystkie warstwy"><button id="cz-miekki">Miękki brzeg</button><button id="cz-wyrownaj">Jasność jak bazowe</button></div>
       </div>
-      <div class="rzad"><button id="cz-dodaj">Wytnij więcej</button><button id="cz-usun" hidden>Usuń</button><button class="glowny" id="cz-dalej">Dalej</button></div>
+      <div id="cz-ustaw" hidden>
+        <div class="chipy" id="cz-suwaki" role="group" aria-label="Warstwa"><button data-suwak="rozmiar">Rozmiar</button><button data-suwak="obrot">Obrót</button><button data-suwak="jasnosc">Jasność</button><button id="cz-odbij">Odbij</button></div>
+        <label><span class="etykieta"><span id="cz-n-suwak">Rozmiar</span> <output id="cz-o-suwak"></output></span><input type="range" id="cz-suwak" min="10" max="400" step="1"></label>
+        <div class="chipy" role="group" aria-label="Kolejność warstwy"><button id="cz-wyzej">Wyżej</button><button id="cz-nizej">Niżej</button><button id="cz-ukryj">Ukryj</button><button id="cz-usun">Usuń</button></div>
+      </div>
+      <div class="rzad"><button id="cz-dodaj">Dodaj warstwę</button><button class="glowny" id="cz-dalej">Dalej</button></div>
     </div>
   </div>
 </div>

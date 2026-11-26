@@ -1,76 +1,108 @@
 'use strict';
-/* Twarz z części (wycinanki): robisz zwykłe zdjęcie, z bliska albo z daleka, albo bierzesz je z galerii.
-   Na zdjęciu obrysowujesz palcem część ciała (oko, nos, ucho…) i stukasz, co to jest.
-   Do wyniku przechodzi tylko obrysowany kawałek: trafia w swoje miejsce na białej kartce z konturem głowy,
-   a tam można go przesunąć, powiększyć, obrócić i odbić. Z jednego zdjęcia można wyciąć kilka części.
+/* Twarz z części (warstwy). Najpierw robisz zdjęcie bazowe: czyjąś twarz. Ono zajmuje całe tło obrazu.
+   Potem z kolejnych zdjęć (albo z samego bazowego) obrysowujesz palcem część: oko, nos, usta, brodę, włosy…
+   i stukasz, co to jest. Każdy wycinek staje się warstwą nad zdjęciem bazowym: można go przesunąć,
+   powiększyć, obrócić, odbić, ukryć, przenieść wyżej lub niżej i usunąć. Każdą zmianę da się cofnąć i ponowić.
    Jak w twarz.js wszystko składamy w odcieniach szarości i dopiero gotową całość zamienia się na kropki.
-   Wycinki zostają w telefonie (IndexedDB) do naciśnięcia "Wyczyść".
-   Warstwy: 'aparat' -> 'wytnij' (obrys na zdjęciu) -> 'czesci' (układanie) -> 'zdjecie' (kropki i Drukuj). */
-const CZ_BRZEG = 6 / W;                         // miękki brzeg wycinka: 6 kropek (ok. 0,75 mm), w ułamku szerokości kartki
+   Zdjęcie bazowe i warstwy zostają w telefonie (IndexedDB) do naciśnięcia "Wyczyść".
+   Warstwy ekranu: 'aparat' -> 'czesci' (układanie) albo 'aparat' -> 'wytnij' (obrys) -> 'czesci',
+   z układania można też wejść w 'wytnij' na zdjęciu bazowym; na końcu 'zdjecie' (kropki i Drukuj). */
+const CZ_BRZEG = 6 / W;                         // miękki brzeg wycinka: 6 kropek (ok. 0,75 mm), w ułamku szerokości obrazu
 const WY_MAX = 2400;                            // zdjęcie do wycinania trzymamy większe niż zwykle: z daleka części są małe
-const CZ_K = GLOWA.wys / 0.75;                  // jednostka głowy w szerokościach kartki (kartka 3:4)
-const KARTKA_H = 1 / 0.75;                      // wysokość kartki w jej szerokościach
-/* Miejsca na konturze w jednostkach głowy jak w twarz.js: u = w bok od osi, v = w dół od czubka, w i h = rozmiar.
-   Strona "po lewej" to lewa strona wydruku. Wycinek dopasowuje się do swojego miejsca, potem można go zmienić. */
-const MIEJSCA = [
-  { nazwa:'Włosy', ksztalt:'czapka', u:0, v:.13, w:.86, h:.38 },
-  { nazwa:'Oko po lewej', ksztalt:'owal', u:-.17, v:.5, w:.2, h:.12 },
-  { nazwa:'Oko po prawej', ksztalt:'owal', u:.17, v:.5, w:.2, h:.12 },
-  { nazwa:'Nos', ksztalt:'owal', u:0, v:.62, w:.18, h:.24 },
-  { nazwa:'Usta', ksztalt:'owal', u:0, v:.8, w:.3, h:.12 },
-  { nazwa:'Broda', ksztalt:'owal', u:0, v:.93, w:.32, h:.13 },
-  { nazwa:'Ucho po lewej', ksztalt:'owal', u:-.385, v:.58, w:.11, h:.28 },
-  { nazwa:'Ucho po prawej', ksztalt:'owal', u:.385, v:.58, w:.11, h:.28 },
-  { nazwa:'Inne', ksztalt:null, u:0, v:.5, w:.3, h:.3 },
-];
-const RANGA = [1, 5, 5, 4, 3, 2, 0, 0, 6];      // nowy wycinek od spodu: uszy, włosy, broda, usta, nos, oczy, inne na wierzchu
-/* lista = wycinki od spodu do wierzchu: {id,src,img,czesc,w,h,ax,ay,pkt,x,y,s,s0,rot,jasnosc,lustro,zr}
-   src = prostokąt wycięty ze zdjęcia, pkt = obrys w jego pikselach, ax,ay = środek obrysu,
-   zr = {id,m,d}: z którego zdjęcia i jego średnia jasność i rozrzut (do wyrównania zdjęć między sobą),
-   x,y = miejsce środka na kartce (w szerokościach kartki), s = szerokość kartki na piksel wycinka, s0 = s na początku.
-   zrodlo = zdjęcie, z którego teraz wycinasz (nie zapisuje się w telefonie, zostają tylko wycinki). */
-const cz = { lista:[], nr:1, wybrany:null, suwak:'rozmiar', zrodlo:null, obrys:null, rysuje:null, ostatni:null,
-  widok:{ z:1, cx:0, cy:0 }, palce:new Map(), gest:null, zWycinania:false, zaplanowane:0, wyZaplanowane:0, zapisT:0, napewno:{} };
+const NAZWY_CZ = ['Oko', 'Brew', 'Nos', 'Usta', 'Broda', 'Włosy', 'Ucho', 'Inne'];
+/* baza = zdjęcie bazowe {src,img,w,h,zr}; obraz ma jego proporcje, a jednostką jest szerokość obrazu.
+   lista = warstwy od spodu do wierzchu: {id,src,img,czesc,w,h,ax,ay,ox,oy,pkt,x,y,s,s0,rot,jasnosc,lustro,ukryty,zr}
+   src = prostokąt wycięty ze zdjęcia, ox,oy = gdzie ten prostokąt leżał na zdjęciu, pkt = obrys w jego pikselach,
+   ax,ay = środek obrysu, zr = {id,m,d}: z którego zdjęcia, jego średnia jasność i rozrzut (do wyrównania z bazowym),
+   x,y = miejsce środka na obrazie (w szerokościach obrazu), s = szerokość obrazu na piksel wycinka, s0 = s na początku.
+   zrodlo = zdjęcie, z którego teraz wycinasz (nie zapisuje się w telefonie, zostają tylko wycinki).
+   cofnij/ponow = wcześniejsze stany (baza i warstwy), moje = adresy zdjęć tego trybu, żeby zwalniać nieużywane. */
+const cz = { baza:null, lista:[], nr:1, wybrany:null, suwak:'rozmiar', zrodlo:null, zrodloPrzed:null, wyNad:false, zmienBaze:false,
+  obrys:null, rysuje:null, ostatni:null, widok:{ z:1, cx:0, cy:0 }, palce:new Map(), gest:null, zmieniono:false, suwakZm:false,
+  zWycinania:false, cofnij:[], ponow:[], moje:new Set(), tlo:null, zaplanowane:0, wyZaplanowane:0, zapisT:0, napewno:{} };
 
 const czWycinek = id => cz.lista.find(f => f.id === id) || null;
-function czNazwa(f) {                           // "Oko po lewej", a przy drugim takim samym "Oko po lewej 2"
+const czH = () => cz.baza ? cz.baza.h / cz.baza.w : 4 / 3;   // wysokość obrazu w jego szerokościach
+function czNazwa(f) {                           // "Oko", a przy drugim takim samym "Oko 1", "Oko 2"
   const te = cz.lista.filter(g => g.czesc === f.czesc).sort((a, b) => a.id - b.id), nr = te.indexOf(f) + 1;
-  return MIEJSCA[f.czesc].nazwa + (te.length > 1 ? ` ${nr}` : '');
+  return NAZWY_CZ[f.czesc] + (te.length > 1 ? ` ${nr}` : '');
 }
-const ileWycinkow = n => `${n} ${n === 1 ? 'wycinek' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'wycinki' : 'wycinków'}`;
+const ileWarstw = n => `${n} ${n === 1 ? 'warstwa' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'warstwy' : 'warstw'}`;
+function czStaty(img) {                         // średnia jasność i rozrzut całego zdjęcia, na małej kopii
+  const k = 96 / Math.max(img.width, img.height), x = platno(Math.max(1, Math.round(img.width * k)), Math.max(1, Math.round(img.height * k)));
+  x.drawImage(img, 0, 0, x.canvas.width, x.canvas.height);
+  const g = szary(x, x.canvas.width, x.canvas.height), m = g.reduce((a, v) => a + v, 0) / g.length;
+  return { id:Date.now() + Math.random(), m, d:Math.sqrt(g.reduce((a, v) => a + (v - m) * (v - m), 0) / g.length) };
+}
+
+/* ======================= COFNIJ I PONÓW ======================= */
+const czStan = () => ({ baza:cz.baza, lista:cz.lista.map(f => ({ ...f })), wybrany:cz.wybrany });
+function czZmiana() {                           // wywołać tuż PRZED każdą zmianą bazy albo warstw
+  cz.cofnij.push(czStan()); if (cz.cofnij.length > 50) cz.cofnij.shift();
+  cz.ponow = []; czSprzataj();
+}
+function czPrzywroc(skad, dokad) {
+  if (!skad.length) return;
+  dokad.push(czStan());
+  const s = skad.pop();
+  cz.baza = s.baza; cz.lista = s.lista.map(f => ({ ...f })); cz.wybrany = czWycinek(s.wybrany) ? s.wybrany : null;
+  czZapisz(); czPokaz();
+}
+function czSprzataj() {                         // zdjęcia, do których nic już nie prowadzi (także w Cofnij), znikają z pamięci
+  const jest = new Set(), dodaj = s => { if (s.baza) jest.add(s.baza.src); for (const f of s.lista) jest.add(f.src); };
+  dodaj(cz); cz.cofnij.forEach(dodaj); cz.ponow.forEach(dodaj);
+  for (const z of [cz.zrodlo, cz.zrodloPrzed]) if (z) jest.add(z.src);
+  for (const src of cz.moje) if (!jest.has(src)) { obrazy.delete(src); cz.moje.delete(src); }
+}
 
 /* ======================= APARAT ======================= */
-function czPasek() {                            // pasek w aparacie: ile wycinków czeka, Ułóż i Wyczyść
+function czPasek() {                            // pasek w aparacie: który krok, Ułóż i Wyczyść
   const widac = !$('foto').hidden && ust.apTryb === 'czesci' && warstwa === 'aparat', n = cz.lista.length;
   $('cz-krok').hidden = !widac;
   if (!widac) return;
-  $('cz-krok-rada').textContent = n ? `W pamięci: ${ileWycinkow(n)}. Zrób kolejne zdjęcie albo ułóż.`
-    : 'Zrób zdjęcie albo weź je z galerii. Potem obrysujesz palcem nos, oko czy ucho.';
-  $('cz-krok-przyciski').hidden = !n;
+  const [tytul, rada] = !cz.baza ? ['Zdjęcie bazowe', 'Zrób zdjęcie twarzy albo weź je z galerii. Będzie tłem całego obrazu.']
+    : cz.zmienBaze ? ['Nowe zdjęcie bazowe', 'Zrób zdjęcie, które zastąpi tło. Warstwy zostaną na swoich miejscach.']
+    : ['Z części', n ? `Na zdjęciu bazowym: ${ileWarstw(n)}. Zrób zdjęcie, z którego wytniesz kolejną część, albo ułóż.`
+      : 'Zdjęcie bazowe gotowe. Teraz zrób zdjęcie, z którego wytniesz oko, nos albo usta.'];
+  $('cz-krok-tytul').textContent = tytul; $('cz-krok-rada').textContent = rada;
+  $('cz-krok-przyciski').hidden = !cz.baza;
+  $('cz-anuluj').hidden = !cz.zmienBaze; $('cz-wyczysc2').hidden = $('cz-uloz').hidden = cz.zmienBaze;
 }
-function czZdjecie(src) {                       // zdjęcie ze spustu, aparatu telefonu albo galerii: teraz obrys
+function czZdjecie(src) {                       // zdjęcie ze spustu, aparatu telefonu albo galerii
   if (warstwa !== 'aparat') { obrazy.delete(src); return; }
-  if (cz.zrodlo) obrazy.delete(cz.zrodlo.src);
-  const img = obrazy.get(src), k = 96 / Math.max(img.width, img.height), x = platno(Math.round(img.width * k), Math.round(img.height * k));
-  x.drawImage(img, 0, 0, x.canvas.width, x.canvas.height);
-  const g = szary(x, x.canvas.width, x.canvas.height), m = g.reduce((a, v) => a + v, 0) / g.length;
-  const zr = { id:Date.now(), m, d:Math.sqrt(g.reduce((a, v) => a + (v - m) * (v - m), 0) / g.length) };   // jasność całego zdjęcia
-  cz.zrodlo = { src, img, zr, obrysy:[] }; cz.obrys = cz.rysuje = cz.ostatni = null;
+  const img = obrazy.get(src), zr = czStaty(img);
+  if (!cz.baza || cz.zmienBaze) {               // pierwsze zdjęcie (albo "Zmień tło") staje się tłem
+    if (cz.baza) czZmiana();                    // przed dopisaniem do "moje", bo sprzątanie usunęłoby nowe zdjęcie
+    cz.moje.add(src);
+    cz.baza = { src, img, w:img.width, h:img.height, zr }; cz.zmienBaze = false; cz.wybrany = null;
+    czSprzataj(); czZapisz(); cz.zWycinania = false; otworzWarstwe('czesci');
+    return;
+  }
+  cz.zrodlo = { src, img, zr }; cz.moje.add(src); cz.obrys = cz.rysuje = cz.ostatni = null;
   cz.widok = { z:1, cx:img.width / 2, cy:img.height / 2 };
-  otworzWarstwe('wytnij');
+  czSprzataj(); otworzWarstwe('wytnij');
 }
 function czWarstwa(w) {                         // wywoływane z ustawWarstwe po twWarstwa
   $('wytnij').hidden = w !== 'wytnij'; $('czesci').hidden = w !== 'czesci';
   $('cz-porady').hidden = !(w === 'aparat' && ust.apTryb === 'czesci' && ust.wyPorady);
-  czPasek();
+  if (w !== 'wytnij' && cz.wyNad) { cz.wyNad = false; cz.zrodlo = cz.zrodloPrzed; cz.zrodloPrzed = null; cz.obrys = cz.rysuje = null; }
+  if (w === 'aparat' || !w) { cz.zrodlo = null; cz.obrys = cz.rysuje = null; }   // zdjęcie do wycinania już niepotrzebne
+  if (!w) cz.zmienBaze = false;
+  czSprzataj(); czPasek();
   if (w === 'wytnij') { wyPokaz(); wyOdrysuj(); }
   if (w === 'czesci') czPokaz();
-  if (!w && cz.zrodlo) { obrazy.delete(cz.zrodlo.src); cz.zrodlo = null; }   // aparat zamknięty: zdjęcie do wycinania już niepotrzebne
 }
 $('cz-zaczynam').addEventListener('click', () => { ust.wyPorady = false; zapisz(); $('cz-porady').hidden = true; $('ap-spust').focus(); });
-$('cz-uloz').addEventListener('click', () => { if (warstwa === 'aparat') { cz.zWycinania = false; otworzWarstwe('czesci'); } });
+$('cz-uloz').addEventListener('click', () => { if (warstwa === 'aparat' && cz.baza) { cz.zWycinania = false; otworzWarstwe('czesci'); } });
+$('cz-anuluj').addEventListener('click', () => { if (warstwa !== 'aparat') return; cz.zmienBaze = false; cz.zWycinania = false; otworzWarstwe('czesci'); });
 
 /* ======================= WYCINANIE: OBRYS PALCEM ======================= */
+const wyGlebia = () => cz.wyNad ? czGlebia() + 1 : 2;   // ile kroków Wstecz z wycinania zamyka cały aparat
+function wyObrysy() {                           // to, co już wycięto z tego zdjęcia, w pikselach zdjęcia
+  const z = cz.zrodlo; if (!z) return [];
+  return cz.lista.filter(f => f.zr && f.zr.id === z.zr.id && f.ox !== undefined)
+    .map(f => ({ id:f.id, nazwa:czNazwa(f), pkt:f.pkt.map((v, i) => v + (i % 2 ? f.oy : f.ox)) }));
+}
 function wyGeometria() {                        // piksel zdjęcia -> punkt na ekranie: X = ox + px * k
   const c = $('wy-zdjecie'), img = cz.zrodlo.img, v = cz.widok;
   const cw = c.clientWidth || 1, ch = c.clientHeight || 1, k = Math.min(cw / img.width, ch / img.height) * v.z;
@@ -98,7 +130,7 @@ function wyRysuj() {
   x.imageSmoothingQuality = 'high'; x.drawImage(img, ox, oy, img.width * k, img.height * k);
   const naEkran = p => p.map((v, i) => i % 2 ? oy + v * k : ox + v * k);
   x.lineJoin = x.lineCap = 'round';
-  for (const o of cz.zrodlo.obrysy) {           // to, co już wycięto z tego zdjęcia
+  for (const o of wyObrysy()) {
     const p = naEkran(o.pkt);
     x.save(); x.setLineDash([5, 5]); x.lineWidth = 1.5; x.strokeStyle = 'rgba(255,255,255,.85)';
     x.beginPath(); sciezkaPunktow(x, p); x.closePath(); x.stroke(); x.restore();
@@ -118,16 +150,16 @@ function wyRysuj() {
   }
 }
 function wyPokaz() {
-  const n = cz.lista.length, jest = !!cz.obrys, f = czWycinek(cz.ostatni);
+  const n = cz.lista.length, jest = !!cz.obrys, f = czWycinek(cz.ostatni), dalej = cz.wyNad ? 'Gotowe' : 'Ułóż';
   $('wy-rada').textContent = jest ? 'Teraz stuknij, co obrysowałeś. Możesz też obrysować jeszcze raz.'
-    : f ? `Wycięto: ${czNazwa(f)}. Obrysuj następną część albo stuknij Ułóż.`
+    : f ? `Wycięto: ${czNazwa(f)}. Obrysuj następną część albo stuknij ${dalej}.`
     : 'Obrysuj palcem część, którą chcesz wyciąć. Dwoma palcami przybliżysz zdjęcie.';
   for (const p of $('wy-czesci').children) p.disabled = !jest;
-  $('wy-uloz').textContent = n ? `Ułóż (${n})` : 'Ułóż';
-  $('wy-uloz').disabled = !n;
-  $('wy-cofnij').disabled = !(cz.zrodlo && cz.zrodlo.obrysy.length);
+  $('wy-uloz').textContent = !cz.wyNad && n ? `Ułóż (${n})` : dalej;
+  $('wy-uloz').disabled = !cz.baza;
+  $('wy-cofnij').disabled = !wyObrysy().length;
 }
-$('wy-czesci').innerHTML = MIEJSCA.map((m, i) => `<button data-czesc="${i}" disabled>${m.nazwa}</button>`).join('');
+$('wy-czesci').innerHTML = NAZWY_CZ.map((m, i) => `<button data-czesc="${i}" disabled>${m}</button>`).join('');
 
 function wyPunkt(e) {                           // palec -> piksel zdjęcia
   const b = $('wy-zdjecie').getBoundingClientRect(), g = wyGeometria();
@@ -183,8 +215,8 @@ wy.addEventListener('wheel', e => {             // na komputerze: kółko myszy 
 }, { passive:false });
 new ResizeObserver(wyOdrysuj).observe(wy.parentElement);
 
-async function czWytnij(pkt, czesc) {           // obrys + nazwa -> nowy wycinek na swoim miejscu
-  const img = cz.zrodlo.img;
+async function czWytnij(pkt, czesc) {           // obrys + nazwa -> nowa warstwa na wierzchu
+  const z = cz.zrodlo, img = z.img;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let i = 0; i < pkt.length; i += 2) { x0 = Math.min(x0, pkt[i]); x1 = Math.max(x1, pkt[i]); y0 = Math.min(y0, pkt[i + 1]); y1 = Math.max(y1, pkt[i + 1]); }
   const zap = Math.max(4, 0.03 * Math.max(x1 - x0, y1 - y0));
@@ -192,16 +224,15 @@ async function czWytnij(pkt, czesc) {           // obrys + nazwa -> nowy wycinek
   const w = Math.max(1, Math.min(img.width, Math.ceil(x1 + zap)) - l), h = Math.max(1, Math.min(img.height, Math.ceil(y1 + zap)) - g);
   const x = platno(w, h); x.drawImage(img, -l, -g);
   const src = x.canvas.toDataURL('image/jpeg', 0.92);
-  obrazy.set(src, await createImageBitmap(x.canvas));
-  const m = MIEJSCA[czesc], bw = m.w * CZ_K, bh = m.h * GLOWA.wys * KARTKA_H;
-  const s = Math.min(bw / Math.max(1, x1 - x0), bh / Math.max(1, y1 - y0));
-  const f = { id:cz.nr++, src, img:obrazy.get(src), czesc, w, h, ax:(x0 + x1) / 2 - l, ay:(y0 + y1) / 2 - g,
+  const bmp = await createImageBitmap(x.canvas);
+  czZmiana(); obrazy.set(src, bmp); cz.moje.add(src);   // w tej kolejności: sprzątanie w czZmiana nie zna jeszcze nowego wycinka
+  /* Na start warstwa ma skalę i miejsce jak na swoim zdjęciu, przeniesione na cały obraz:
+     wycięta z bazowego leży dokładnie tam, skąd ją wzięto, a z podobnie zrobionego zdjęcia mniej więcej na swoim miejscu. */
+  const H = czH(), s = Math.sqrt(H / (img.width * img.height)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;   // zdjęcie poziome na pionowym tle: skala pośrodku
+  const f = { id:cz.nr++, src, img:obrazy.get(src), czesc, w, h, ax:cx - l, ay:cy - g, ox:l, oy:g,
     pkt:pkt.map((v, i) => Math.round((v - (i % 2 ? g : l)) * 10) / 10),
-    x:.5 + m.u * CZ_K, y:(GLOWA.gora + m.v * GLOWA.wys) * KARTKA_H, s, s0:s, rot:0, jasnosc:0, lustro:false, zr:cz.zrodlo.zr };
-  let gdzie = cz.lista.length;                  // nad wycinkami niższej lub tej samej rangi
-  while (gdzie > 0 && RANGA[cz.lista[gdzie - 1].czesc] > RANGA[czesc]) gdzie--;
-  cz.lista.splice(gdzie, 0, f);
-  cz.zrodlo.obrysy.push({ id:f.id, pkt, nazwa:czNazwa(f) });
+    x:ogr(cx / img.width, 0, 1), y:ogr(cy / img.height * H, 0, H), s, s0:s, rot:0, jasnosc:0, lustro:false, ukryty:false, zr:z.zr };
+  cz.lista.push(f);
   cz.obrys = null; cz.ostatni = f.id; cz.wybrany = f.id;
   czZapisz(); wyPokaz(); wyOdrysuj();
 }
@@ -210,25 +241,19 @@ $('wy-czesci').addEventListener('click', e => {
   czWytnij(cz.obrys, +p.dataset.czesc).catch(() => { $('wy-rada').textContent = 'Nie udało się wyciąć. Spróbuj jeszcze raz.'; });
 });
 $('wy-cofnij').addEventListener('click', () => {   // cofa ostatni wycinek z tego zdjęcia, obrys wraca do poprawienia
-  const o = cz.zrodlo && cz.zrodlo.obrysy[cz.zrodlo.obrysy.length - 1]; if (!o) return;
-  czUsun(o.id); cz.obrys = o.pkt; cz.ostatni = null; czZapisz(); wyPokaz(); wyOdrysuj();
+  const o = wyObrysy().sort((a, b) => b.id - a.id)[0]; if (!o) return;
+  czZmiana(); czUsun(o.id); cz.obrys = o.pkt; cz.ostatni = null; czZapisz(); wyPokaz(); wyOdrysuj();
 });
-$('wy-uloz').addEventListener('click', () => { if (warstwa === 'wytnij' && cz.lista.length) { cz.zWycinania = true; otworzWarstwe('czesci'); } });
-$('wy-inne').addEventListener('click', () => { if (warstwa === 'wytnij') zamknijWarstwe(); });
-$('wy-zamknij').addEventListener('click', () => zamknijWarstwe(2));
+$('wy-uloz').addEventListener('click', () => {
+  if (warstwa !== 'wytnij' || !cz.baza) return;
+  if (cz.wyNad) zamknijWarstwe();               // wycinanie z bazowego: z powrotem do układania
+  else { cz.zWycinania = true; otworzWarstwe('czesci'); }
+});
+$('wy-inne').addEventListener('click', () => { if (warstwa === 'wytnij') zamknijWarstwe(wyGlebia() - 1); });   // do aparatu
+$('wy-zamknij').addEventListener('click', () => zamknijWarstwe(wyGlebia()));
 
 /* ======================= SKŁADANIE ======================= */
-function ksztalt(x, typ, X, Y, w, h) {          // zarys miejsca (tylko na ekranie, jako podpowiedź)
-  if (typ === 'owal') { x.moveTo(X + w, Y + h / 2); x.ellipse(X + w / 2, Y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); return; }
-  const P = (a, b) => [X + a * w, Y + b * h];   // czapka: łuk nad głową, dolny brzeg wygięty jak linia włosów
-  x.moveTo(...P(0, .95));
-  x.bezierCurveTo(...P(0, .15), ...P(.22, 0), ...P(.5, 0));
-  x.bezierCurveTo(...P(.78, 0), ...P(1, .15), ...P(1, .95));
-  x.bezierCurveTo(...P(.88, .62), ...P(.68, .52), ...P(.5, .58));
-  x.bezierCurveTo(...P(.32, .52), ...P(.12, .62), ...P(0, .95));
-  x.closePath();
-}
-function macierz(f, ow) {                       // piksel wycinka -> piksel kartki o szerokości ow
+function macierz(f, ow) {                       // piksel wycinka -> piksel obrazu o szerokości ow
   const k = f.s * ow;
   return new DOMMatrix().translate(f.x * ow, f.y * ow).rotate(f.rot).scale(f.lustro ? -k : k, k).translate(-f.ax, -f.ay);
 }
@@ -237,7 +262,7 @@ function szary(x, w, h) {                       // odcienie szarości 0..1 z pł
   for (let i = 0; i < g.length; i++) g[i] = (d[i*4] * 0.299 + d[i*4+1] * 0.587 + d[i*4+2] * 0.114) / 255;
   return g;
 }
-function czOkno(f, ow, oh, b) {                 // wycinek na kartce: jego obszar, szarości i miękka maska 0..1
+function czOkno(f, ow, oh, b) {                 // warstwa na obrazie: jej obszar, szarości i miękka maska 0..1
   const M = macierz(f, ow);
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const [a, c] of [[0, 0], [f.w, 0], [0, f.h], [f.w, f.h]]) {
@@ -259,30 +284,25 @@ function czOkno(f, ow, oh, b) {                 // wycinek na kartce: jego obsza
   } else a = szary(xm, w, h);
   return { x0, y0, w, h, g:szary(xi, w, h), a };
 }
-function czZloz(ow) {                           // wynik: ImageData w odcieniach szarości, szerokość ow, kartka 3:4
-  const oh = Math.round(ow * KARTKA_H), n = ow * oh, b = ust.czMiekki ? CZ_BRZEG * ow : 0;
-  const v = new Float32Array(n).fill(1);
-  if (ust.czKontur) {                           // kontur głowy szarą kreską na białej kartce
-    const x = platno(ow, oh), H = GLOWA.wys * oh, gora = GLOWA.gora * oh, P = (u, w) => [ow / 2 + u * H, gora + w * H];
-    x.fillStyle = '#000'; x.fillRect(0, 0, ow, oh);
-    x.strokeStyle = '#fff'; x.lineWidth = Math.max(1, 1.6 * ow / W); x.lineCap = x.lineJoin = 'round';
-    x.beginPath(); sciezkaKonturu(x, P); x.stroke();
-    const L = szary(x, ow, oh);
-    for (let i = 0; i < n; i++) if (L[i]) v[i] = v[i] * (1 - L[i]) + 0.12 * L[i];
-  }
-  const okna = cz.lista.map(f => czOkno(f, ow, oh, b));
-  /* Wyrównanie zdjęć: całe zdjęcia (nie pojedyncze wycinki) dostają wspólną jasność i kontrast.
+function czZloz(ow) {                           // wynik: ImageData w odcieniach szarości, szerokość ow, proporcje zdjęcia bazowego
+  const oh = Math.max(1, Math.round(ow * czH())), n = ow * oh, b = ust.czMiekki ? CZ_BRZEG * ow : 0, B = cz.baza;
+  let v;
+  if (B) {                                      // tło: całe zdjęcie bazowe (szarości zapamiętane, bo rysujemy przy każdym ruchu palca)
+    if (!cz.tlo || cz.tlo.src !== B.src || cz.tlo.ow !== ow) {
+      const x = platno(ow, oh); x.imageSmoothingQuality = 'high'; x.drawImage(B.img, 0, 0, ow, oh);
+      cz.tlo = { src:B.src, ow, g:szary(x, ow, oh) };
+    }
+    v = Float32Array.from(cz.tlo.g);
+  } else v = new Float32Array(n).fill(1);
+  const widac = cz.lista.filter(f => !f.ukryty && f.img), okna = widac.map(f => czOkno(f, ow, oh, b));
+  /* Wyrównanie do bazowego: całe zdjęcia (nie pojedyncze wycinki) dostają jasność i kontrast zdjęcia bazowego.
      Wycinki z jednego zdjęcia zmieniają się tak samo, więc ciemne usta zostają ciemniejsze od skóry. */
-  const zdj = [...new Map(cz.lista.filter(f => f.zr).map(f => [f.zr.id, f.zr])).values()];
-  if (ust.czRownajZdjecia && zdj.length > 1) {
-    const M = zdj.reduce((a, s) => a + s.m, 0) / zdj.length, D = zdj.reduce((a, s) => a + s.d, 0) / zdj.length;
-    okna.forEach((o, j) => {
-      const s = cz.lista[j].zr; if (!o || !s) return;
-      const k = s.d > 0.01 ? ogr(D / s.d, 0.8, 1.25) : 1;
-      for (let i = 0; i < o.g.length; i++) o.g[i] = (o.g[i] - s.m) * k + M;
-    });
-  }
-  cz.lista.forEach((f, j) => {
+  if (ust.czRownajZdjecia && B) okna.forEach((o, j) => {
+    const s = widac[j].zr; if (!o || !s || s.id === B.zr.id) return;
+    const k = s.d > 0.01 ? ogr(B.zr.d / s.d, 0.8, 1.25) : 1;
+    for (let i = 0; i < o.g.length; i++) o.g[i] = (o.g[i] - s.m) * k + B.zr.m;
+  });
+  widac.forEach((f, j) => {
     const o = okna[j]; if (!o) return;
     const jas = f.jasnosc / 200;
     for (let y = 0; y < o.h; y++) for (let x = 0; x < o.w; x++) {
@@ -296,58 +316,58 @@ function czZloz(ow) {                           // wynik: ImageData w odcieniach
 }
 
 /* ======================= UKŁADANIE ======================= */
-const SUWAKI_CZ = { rozmiar:['Rozmiar', 30, 300], obrot:['Obrót', -180, 180], jasnosc:['Jasność', -60, 60] };
+const SUWAKI_CZ = { rozmiar:['Rozmiar', 10, 400], obrot:['Obrót', -180, 180], jasnosc:['Jasność', -60, 60] };
 function czWartosc(f, k) { return k === 'rozmiar' ? Math.round(f.s / f.s0 * 100) : k === 'obrot' ? Math.round(f.rot) : f.jasnosc; }
 const czOpis = (k, v) => k === 'rozmiar' ? `${v}%` : k === 'obrot' ? `${v}°` : `${v}`;
 function czPokaz() {
   const f = czWycinek(cz.wybrany); if (!f) cz.wybrany = null;
-  $('cz-wybor').innerHTML = wcisk('data-cz="-1"', 'Kartka', !f) + cz.lista.map(g => wcisk(`data-cz="${g.id}"`, czNazwa(g), g === f)).join('');
+  const nr = f ? cz.lista.indexOf(f) : -1;
+  $('cz-wybor').innerHTML = wcisk('data-cz="-1"', 'Zdjęcie bazowe', !f)
+    + cz.lista.map(g => wcisk(`data-cz="${g.id}"`, czNazwa(g) + (g.ukryty ? ' (ukryta)' : ''), g === f)).join('');
   const wcis = $('cz-wybor').querySelector('[aria-pressed=true]'); if (wcis) wcis.scrollIntoView({ block:'nearest', inline:'nearest' });
-  $('cz-kartka').hidden = !!f; $('cz-ustaw').hidden = !f; $('cz-usun').hidden = !f;
-  $('cz-kontur').setAttribute('aria-pressed', !!ust.czKontur);
+  $('cz-tlo').hidden = !!f; $('cz-ustaw').hidden = !f;
+  $('cz-cofnij').disabled = !cz.cofnij.length; $('cz-ponow').disabled = !cz.ponow.length;
+  $('cz-z-bazy').disabled = $('cz-zmien').disabled = !cz.baza;
   $('cz-miekki').setAttribute('aria-pressed', !!ust.czMiekki);
   $('cz-wyrownaj').setAttribute('aria-pressed', !!ust.czRownajZdjecia);
-  $('cz-wyrownaj').hidden = new Set(cz.lista.map(f => f.zr && f.zr.id)).size < 2;   // ma sens dopiero przy dwóch zdjęciach
   if (f) {
     for (const p of $('cz-suwaki').querySelectorAll('[data-suwak]')) p.setAttribute('aria-pressed', p.dataset.suwak === cz.suwak);
     $('cz-odbij').setAttribute('aria-pressed', !!f.lustro);
-    $('cz-wierzch').disabled = cz.lista[cz.lista.length - 1] === f;
+    $('cz-ukryj').textContent = f.ukryty ? 'Pokaż' : 'Ukryj';
+    $('cz-wyzej').disabled = nr === cz.lista.length - 1; $('cz-nizej').disabled = nr === 0;
     const [nazwa, min, max] = SUWAKI_CZ[cz.suwak], s = $('cz-suwak'), v = czWartosc(f, cz.suwak);
     $('cz-n-suwak').textContent = nazwa; s.min = min; s.max = max; s.value = v; $('cz-o-suwak').textContent = czOpis(cz.suwak, v);
   }
-  $('cz-dodaj').textContent = cz.zWycinania ? 'Wytnij więcej' : 'Nowe zdjęcie';
-  $('cz-dalej').disabled = !cz.lista.length;
-  $('cz-rada').textContent = !cz.lista.length ? 'Nie ma jeszcze wycinków. Zrób zdjęcie i obrysuj część.'
-    : f ? 'Przeciągnij, żeby przesunąć. Dwoma palcami powiększysz i obrócisz.' : 'Dotknij wycinka, żeby go wybrać.';
+  $('cz-dodaj').textContent = cz.zWycinania ? 'Wytnij więcej' : 'Dodaj warstwę';
+  $('cz-dalej').disabled = !cz.baza;
+  $('cz-rada').textContent = !cz.baza ? 'Nie ma jeszcze zdjęcia bazowego.'
+    : f ? (f.ukryty ? 'Ta warstwa jest ukryta. Stuknij "Pokaż", żeby wróciła.' : 'Przeciągnij, żeby przesunąć. Dwoma palcami powiększysz i obrócisz.')
+    : cz.lista.length ? 'Dotknij warstwy na obrazie albo na liście, żeby ją wybrać.'
+    : 'To jest zdjęcie bazowe. Stuknij "Dodaj warstwę" i zrób zdjęcie, z którego wytniesz część.';
   czOdrysuj();
 }
 function czOdrysuj() { if (!cz.zaplanowane) cz.zaplanowane = requestAnimationFrame(() => { cz.zaplanowane = 0; czRysuj(); }); }
 function czRysuj() {
   if ($('czesci').hidden) return;
-  const c = $('cz-podglad'), pole = c.parentElement, dpr = devicePixelRatio || 1;
-  const css = Math.max(60, Math.min(pole.clientWidth - 8, (pole.clientHeight - 8) * 0.75)), H = css * KARTKA_H;
+  const c = $('cz-podglad'), pole = c.parentElement, dpr = devicePixelRatio || 1, H = czH();
+  const css = Math.max(60, Math.min(pole.clientWidth - 8, (pole.clientHeight - 8) / H));
   const im = czZloz(Math.min(576, Math.round(css * dpr)));
-  c.width = im.width; c.height = im.height; c.style.width = `${css}px`; c.style.height = `${H}px`;
+  c.width = im.width; c.height = im.height; c.style.width = `${css}px`; c.style.height = `${css * H}px`;
   const x = c.getContext('2d'); x.putImageData(im, 0, 0);
-  const sk = im.width / css; x.setTransform(sk, 0, 0, sk, 0, 0);
-  x.save(); x.setLineDash([3, 4]); x.strokeStyle = 'rgba(0,0,0,.3)'; x.lineWidth = 1;   // miejsca bez wycinka: tylko na ekranie
-  MIEJSCA.forEach((m, i) => {
-    if (!m.ksztalt || cz.lista.some(f => f.czesc === i)) return;
-    const w = m.w * CZ_K * css, h = m.h * GLOWA.wys * H, cx = (.5 + m.u * CZ_K) * css, cy = (GLOWA.gora + m.v * GLOWA.wys) * H;
-    x.beginPath(); ksztalt(x, m.ksztalt, cx - w / 2, cy - h / 2, w, h); x.stroke();
-  });
-  x.restore();
-  const f = czWycinek(cz.wybrany);
-  if (f) {                                      // wybrany wycinek: różowy obrys
-    x.save(); x.setTransform(new DOMMatrix().scale(sk).multiply(macierz(f, css)));
-    x.beginPath(); sciezkaPunktow(x, f.pkt); x.closePath(); x.restore();
-    x.lineJoin = 'round'; x.strokeStyle = '#e8557b'; x.lineWidth = 2.5; x.setLineDash([6, 4]); x.stroke(); x.setLineDash([]);
+  const sk = im.width / css, f = czWycinek(cz.wybrany);
+  if (f) {                                      // wybrana warstwa: różowy obrys (tylko na ekranie)
+    x.setTransform(new DOMMatrix().scale(sk).multiply(macierz(f, css)));
+    x.beginPath(); sciezkaPunktow(x, f.pkt); x.closePath(); x.setTransform(1, 0, 0, 1, 0, 0);
+    x.lineJoin = 'round'; x.lineWidth = 2.5 * sk;
+    x.strokeStyle = 'rgba(0,0,0,.5)'; x.stroke();
+    x.strokeStyle = '#e8557b'; x.setLineDash([6 * sk, 4 * sk]); x.stroke(); x.setLineDash([]);
   }
 }
-function czTrafiony(px, py, css) {              // który wycinek leży pod palcem (najwyższy na wierzchu)
+function czTrafiony(px, py, css) {              // która widoczna warstwa leży pod palcem (najwyższa na wierzchu)
   const x = pomiar;
   for (let j = cz.lista.length - 1; j >= 0; j--) {
-    const f = cz.lista[j], p = macierz(f, css).inverse().transformPoint({ x:px, y:py });
+    const f = cz.lista[j]; if (f.ukryty) continue;
+    const p = macierz(f, css).inverse().transformPoint({ x:px, y:py });
     x.setTransform(1, 0, 0, 1, 0, 0); x.beginPath(); sciezkaPunktow(x, f.pkt); x.closePath();
     x.lineWidth = 24 / (f.s * css);             // małe wycinki łatwo trafić także tuż obok brzegu
     if (x.isPointInPath(p.x, p.y) || x.isPointInStroke(p.x, p.y)) return f;
@@ -359,7 +379,7 @@ function czDwaPalce() {
   const [a, b] = [...cz.palce.values()];
   return { d:Math.hypot(a.x - b.x, a.y - b.y) || 1, kat:Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI, mx:(a.x + b.x) / 2, my:(a.y + b.y) / 2 };
 }
-function czStartGestu() {                       // stan wycinka i palców na początku ruchu
+function czStartGestu() {                       // stan warstwy i palców na początku ruchu
   const f = czWycinek(cz.wybrany); cz.gest = null; if (!f || !cz.palce.size) return;
   const css = pg.getBoundingClientRect().width;
   if (cz.palce.size === 1) { const [p] = cz.palce.values(); cz.gest = { css, mx:p.x, my:p.y, x:f.x, y:f.y }; }
@@ -368,6 +388,7 @@ function czStartGestu() {                       // stan wycinka i palców na poc
 pg.addEventListener('pointerdown', e => {
   pg.setPointerCapture(e.pointerId); cz.palce.set(e.pointerId, { x:e.clientX, y:e.clientY });
   if (cz.palce.size === 1) {
+    cz.zmieniono = false;
     const b = pg.getBoundingClientRect(), f = czTrafiony(e.clientX - b.left, e.clientY - b.top, b.width);
     cz.wybrany = f ? f.id : null; czPokaz();
   }
@@ -377,39 +398,51 @@ pg.addEventListener('pointermove', e => {
   if (!cz.palce.has(e.pointerId)) return;
   cz.palce.set(e.pointerId, { x:e.clientX, y:e.clientY });
   const g = cz.gest, f = czWycinek(cz.wybrany); if (!g || !f) return;
+  const H = czH();
   if (cz.palce.size === 1) {
     const [p] = cz.palce.values();
-    f.x = ogr(g.x + (p.x - g.mx) / g.css, -.1, 1.1); f.y = ogr(g.y + (p.y - g.my) / g.css, -.1, KARTKA_H + .1);
+    if (!cz.zmieniono && Math.hypot(p.x - g.mx, p.y - g.my) < 4) return;   // samo dotknięcie tylko wybiera
+    if (!cz.zmieniono) { czZmiana(); cz.zmieniono = true; }
+    f.x = ogr(g.x + (p.x - g.mx) / g.css, -.1, 1.1); f.y = ogr(g.y + (p.y - g.my) / g.css, -.1, H + .1);
   } else {                                      // dwa palce: rozsunięcie = rozmiar, skręt = obrót, środek = przesunięcie
+    if (!cz.zmieniono) { czZmiana(); cz.zmieniono = true; }
     const t = czDwaPalce();
-    f.s = ogr(g.s * t.d / g.d, f.s0 * .3, f.s0 * 3);
+    f.s = ogr(g.s * t.d / g.d, f.s0 * .1, f.s0 * 4);
     f.rot = ((g.rot + t.kat - g.kat + 540) % 360) - 180;
-    f.x = ogr(g.x + (t.mx - g.mx) / g.css, -.1, 1.1); f.y = ogr(g.y + (t.my - g.my) / g.css, -.1, KARTKA_H + .1);
+    f.x = ogr(g.x + (t.mx - g.mx) / g.css, -.1, 1.1); f.y = ogr(g.y + (t.my - g.my) / g.css, -.1, H + .1);
   }
   czOdrysuj();
 });
 function czPusc(e) {
   if (!cz.palce.delete(e.pointerId)) return;
   czStartGestu();                               // zostaje jeden palec: dalej przesuwa, bez skoku
-  if (!cz.palce.size) { czZapisz(); czPokaz(); }
+  if (!cz.palce.size) { if (cz.zmieniono) czZapisz(); czPokaz(); }
 }
 for (const t of ['pointerup', 'pointercancel']) pg.addEventListener(t, czPusc);
 $('cz-wybor').addEventListener('click', e => { const p = e.target.closest('[data-cz]'); if (p) { cz.wybrany = +p.dataset.cz < 0 ? null : +p.dataset.cz; czPokaz(); } });
 $('cz-suwaki').addEventListener('click', e => { const p = e.target.closest('[data-suwak]'); if (p) { cz.suwak = p.dataset.suwak; czPokaz(); } });
 $('cz-suwak').addEventListener('input', e => {
   const f = czWycinek(cz.wybrany); if (!f) return;
+  if (!cz.suwakZm) { czZmiana(); cz.suwakZm = true; $('cz-cofnij').disabled = false; $('cz-ponow').disabled = true; }   // jedno przesunięcie suwaka = jeden krok Cofnij
   const v = +e.target.value;
   if (cz.suwak === 'rozmiar') f.s = f.s0 * v / 100; else if (cz.suwak === 'obrot') f.rot = v; else f.jasnosc = v;
   $('cz-o-suwak').textContent = czOpis(cz.suwak, v); czOdrysuj(); czZapisz();
 });
-$('cz-odbij').addEventListener('click', () => { const f = czWycinek(cz.wybrany); if (f) { f.lustro = !f.lustro; czZapisz(); czPokaz(); } });
-$('cz-wierzch').addEventListener('click', () => {
+$('cz-suwak').addEventListener('change', () => { cz.suwakZm = false; });
+function czZmien(dzialaj) {                     // zmiana wybranej warstwy jednym przyciskiem
   const f = czWycinek(cz.wybrany); if (!f) return;
-  cz.lista = [...cz.lista.filter(g => g !== f), f]; czZapisz(); czPokaz();
-});
-for (const [id, klucz] of [['cz-kontur', 'czKontur'], ['cz-miekki', 'czMiekki'], ['cz-wyrownaj', 'czRownajZdjecia']])
+  czZmiana(); dzialaj(f, cz.lista.indexOf(f)); czZapisz(); czPokaz();
+}
+$('cz-odbij').addEventListener('click', () => czZmien(f => { f.lustro = !f.lustro; }));
+$('cz-ukryj').addEventListener('click', () => czZmien(f => { f.ukryty = !f.ukryty; }));
+$('cz-wyzej').addEventListener('click', () => czZmien((f, i) => { if (i < cz.lista.length - 1) [cz.lista[i], cz.lista[i + 1]] = [cz.lista[i + 1], f]; }));
+$('cz-nizej').addEventListener('click', () => czZmien((f, i) => { if (i > 0) [cz.lista[i], cz.lista[i - 1]] = [cz.lista[i - 1], f]; }));
+$('cz-usun').addEventListener('click', () => czZmien(f => czUsun(f.id)));   // da się cofnąć, więc bez pytania
+$('cz-cofnij').addEventListener('click', () => czPrzywroc(cz.cofnij, cz.ponow));
+$('cz-ponow').addEventListener('click', () => czPrzywroc(cz.ponow, cz.cofnij));
+for (const [id, klucz] of [['cz-miekki', 'czMiekki'], ['cz-wyrownaj', 'czRownajZdjecia']])
   $(id).addEventListener('click', () => { ust[klucz] = !ust[klucz]; zapisz(); czPokaz(); });
-function dwaRazy(id, napis, dzialaj) {          // wycinków nie da się przywrócić, więc trzeba dotknąć drugi raz
+function dwaRazy(id, napis, dzialaj) {          // "Wyczyść" nie da się cofnąć, więc trzeba dotknąć drugi raz
   $(id).addEventListener('click', () => {
     const p = $(id);
     if (!cz.napewno[id]) { p.textContent = 'Na pewno?'; cz.napewno[id] = setTimeout(() => { cz.napewno[id] = 0; p.textContent = napis; }, 3000); return; }
@@ -418,25 +451,28 @@ function dwaRazy(id, napis, dzialaj) {          // wycinków nie da się przywr�
   });
 }
 function czUsun(id) {
-  const f = czWycinek(id); if (!f) return;
-  obrazy.delete(f.src); cz.lista = cz.lista.filter(g => g !== f);
+  cz.lista = cz.lista.filter(g => g.id !== id);
   if (cz.wybrany === id) cz.wybrany = null;
-  if (cz.zrodlo) cz.zrodlo.obrysy = cz.zrodlo.obrysy.filter(o => o.id !== id);
 }
-function czWyczysc() {                          // wszystko od nowa: wycinki, zdjęcie do wycinania i pamięć telefonu
-  for (const f of cz.lista) obrazy.delete(f.src);
-  cz.lista = []; cz.wybrany = cz.obrys = cz.rysuje = cz.ostatni = null;
-  if (cz.zrodlo) { obrazy.delete(cz.zrodlo.src); cz.zrodlo = null; }
-  czZapiszTeraz();
+function czWyczysc() {                          // wszystko od nowa: zdjęcie bazowe, warstwy, Cofnij i pamięć telefonu
+  cz.baza = null; cz.lista = []; cz.cofnij = []; cz.ponow = []; cz.tlo = null;
+  cz.wybrany = cz.obrys = cz.rysuje = cz.ostatni = cz.zrodlo = cz.zrodloPrzed = null; cz.wyNad = cz.zmienBaze = false;
+  czSprzataj(); czZapiszTeraz();
 }
 const czGlebia = () => cz.zWycinania ? 3 : 2;   // ile kroków Wstecz z układania zamyka cały aparat
-dwaRazy('cz-usun', 'Usuń', () => { if (cz.wybrany === null) return; czUsun(cz.wybrany); czZapisz(); czPokaz(); });
 dwaRazy('cz-wyczysc', 'Wyczyść', () => { czWyczysc(); zamknijWarstwe(czGlebia() - 1); });   // z powrotem do aparatu
 dwaRazy('cz-wyczysc2', 'Wyczyść', () => { czWyczysc(); czPasek(); });
+$('cz-z-bazy').addEventListener('click', () => {   // wytnij część z samego zdjęcia bazowego
+  if (warstwa !== 'czesci' || !cz.baza) return;
+  cz.zrodloPrzed = cz.zrodlo; cz.zrodlo = { src:cz.baza.src, img:cz.baza.img, zr:cz.baza.zr }; cz.wyNad = true;
+  cz.obrys = cz.rysuje = cz.ostatni = null; cz.widok = { z:1, cx:cz.baza.w / 2, cy:cz.baza.h / 2 };
+  otworzWarstwe('wytnij');
+});
+$('cz-zmien').addEventListener('click', () => { if (warstwa === 'czesci') { cz.zmienBaze = true; zamknijWarstwe(czGlebia() - 1); } });
 $('cz-dodaj').addEventListener('click', () => { if (warstwa === 'czesci') zamknijWarstwe(); });   // do wycinania albo do aparatu
 $('cz-zamknij').addEventListener('click', () => zamknijWarstwe(czGlebia()));
 $('cz-dalej').addEventListener('click', async () => {
-  if (!cz.lista.length) return;
+  if (!cz.baza) return;
   const im = czZloz(2 * W), x = platno(im.width, im.height);   // dwa piksele na kropkę: kropki liczy potem rdzen.js
   x.putImageData(im, 0, 0);
   const src = x.canvas.toDataURL('image/jpeg', 0.9);
@@ -458,21 +494,25 @@ async function czZapiszTeraz() {
   clearTimeout(cz.zapisT); cz.zapisT = 0;
   try {
     const db = await czBaza(), t = db.transaction('stan', 'readwrite'), s = t.objectStore('stan');
-    if (cz.lista.length) s.put({ lista:cz.lista.map(({ img, ...reszta }) => reszta), nr:cz.nr }, 'wycinki');
-    else s.delete('wycinki');                   // "Wyczyść": w telefonie nic nie zostaje
-    s.delete('ostatni');                        // zdjęcia z wersji 0.5 (otwory) nie są już potrzebne
+    if (cz.baza) { const { img, ...baza } = cz.baza; s.put({ baza, lista:cz.lista.map(({ img, ...reszta }) => reszta), nr:cz.nr }, 'warstwy'); }
+    else s.delete('warstwy');                   // "Wyczyść": w telefonie nic nie zostaje
+    s.delete('wycinki'); s.delete('ostatni');   // wycinki z wersji 0.6 (biała kartka) i 0.5 (otwory) nie pasują do warstw
     t.oncomplete = () => db.close();
   } catch (e) { log(`Części: nie zapisano (${e.name})`); }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && cz.zapisT) czZapiszTeraz(); });
 addEventListener('DOMContentLoaded', async () => {   // po wszystkich skryptach, bo wczytajSrc jest w ekran.js
   try {
-    const db = await czBaza();
-    const z = await new Promise((ok, zle) => { const r = db.transaction('stan').objectStore('stan').get('wycinki'); r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
-    db.close();
-    if (!z || cz.lista.length) return;
-    for (const f of z.lista || []) { try { await wczytajSrc(f.src); cz.lista.push({ ...f, img:obrazy.get(f.src) }); } catch {} }
+    const db = await czBaza(), t = db.transaction('stan', 'readwrite'), s = t.objectStore('stan');
+    s.delete('wycinki'); s.delete('ostatni');   // stare wycinki z 0.6 i 0.5 (patrz czZapiszTeraz)
+    t.oncomplete = () => db.close();
+    const z = await new Promise((ok, zle) => { const r = s.get('warstwy'); r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
+    if (!z || !z.baza || cz.baza) return;
+    await wczytajSrc(z.baza.src);
+    if (cz.baza) return;                        // ktoś zdążył zrobić nowe zdjęcie bazowe
+    cz.baza = { ...z.baza, img:obrazy.get(z.baza.src) }; cz.moje.add(z.baza.src);
+    for (const f of z.lista || []) { try { await wczytajSrc(f.src); cz.moje.add(f.src); cz.lista.push({ ...f, img:obrazy.get(f.src) }); } catch {} }
     cz.nr = Math.max(z.nr | 0, ...cz.lista.map(f => f.id + 1), 1);
-    czPasek();
+    czPasek(); if (warstwa === 'czesci') czPokaz();
   } catch {}
 });

@@ -109,7 +109,7 @@ function ustawWarstwe(w) {
 function otworzWarstwe(w) { history.pushState({ warstwa:w }, ''); ustawWarstwe(w); }
 function zamknijWarstwe(ile = 1) { if (warstwa && !wraca) { wraca = true; history.go(-ile); } }   // wraca: szybkie drugie dotknięcie nie cofa dwa razy
 if (history.state && history.state.warstwa) history.replaceState(null, '');   // po odświeżeniu w aparacie: stary wpis nie może otworzyć warstwy
-const WSTECZ = { zdjecie:['aparat', 'twarz', 'czesci'], twarz:['aparat'], wytnij:['aparat'], czesci:['aparat', 'wytnij'] };   // warstwy, do których wolno wrócić przyciskiem Wstecz
+const WSTECZ = { zdjecie:['aparat', 'twarz', 'czesci'], twarz:['aparat'], wytnij:['aparat', 'czesci'], czesci:['aparat', 'wytnij'] };   // warstwy, do których wolno wrócić przyciskiem Wstecz
 addEventListener('popstate', e => { wraca = false; const cel = e.state && e.state.warstwa; ustawWarstwe((WSTECZ[warstwa] || []).includes(cel) ? cel : null); });
 $('pelny').addEventListener('click', () => warstwa ? zamknijWarstwe() : otworzWarstwe('pelny'));
 $('zoom').addEventListener('click', () => { powieksz = !powieksz; $('zoom').textContent = powieksz ? 'Dopasuj' : 'Powiększ 2×'; rozmiarPodgladu(); });

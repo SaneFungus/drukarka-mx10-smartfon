@@ -148,8 +148,8 @@ nav button.glowny[aria-selected=true]{box-shadow:inset 0 0 0 3px var(--marker-te
 #cz-krok p{flex:1 1 170px}
 .cz-przyciski{display:flex;gap:6px;margin-left:auto}
 .cz-przyciski[hidden]{display:none}
-#cz-ustaw .chipy,#cz-kartka{margin-bottom:4px}
-.wy-czesci{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+#cz-ustaw .chipy,#cz-tlo .chipy{margin-bottom:4px}
+.wy-czesci{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
 .wy-czesci button{min-height:44px;padding:0 4px;font-size:14px}
 #tw-dalej,#cz-dalej,#wy-uloz{flex:1.6 1 0;font-size:18px}
 .foto-stan{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
