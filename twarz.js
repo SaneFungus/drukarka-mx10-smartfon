@@ -115,25 +115,28 @@ function twZPliku(src) { const img = obrazy.get(src); twUjecie(src, ramaDla(img.
 function twWyczysc() { for (let i = 0; i < 3; i++) usunZdjecie(i); tw.krok = tw.wybrany = 0; }
 
 function twWarstwa(w) {                         // wywoływane z ustawWarstwe po apWarstwa
-  const t = ust.apTryb === 'twarz';
+  const t = ust.apTryb === 'twarz', zKilku = ust.apTryb !== 'zdjecie';   // zKilku: tu albo w czesci.js
   $('twarz').hidden = w !== 'twarz';
   for (const p of $('ap-tryby').children) p.setAttribute('aria-pressed', p.dataset.tryb === ust.apTryb);
-  if (w === 'aparat') $('ap-telefon').hidden = t;
-  $('tw-galeria').hidden = $('ap-porady').hidden = w !== 'aparat' || !t;
+  if (w === 'aparat') $('ap-telefon').hidden = zKilku;
+  $('tw-galeria').hidden = $('ap-porady').hidden = w !== 'aparat' || !zKilku;
   $('tw-porady').hidden = !(w === 'aparat' && t && ust.twPorady);
   twNakladka();
   if (w === 'twarz') pokazDopasowanie();
 }
 $('ap-tryby').addEventListener('click', e => {
   const p = e.target.closest('[data-tryb]'); if (!p) return;
-  ust.apTryb = p.dataset.tryb; zapisz(); twWarstwa(warstwa);
+  ust.apTryb = p.dataset.tryb; zapisz(); twWarstwa(warstwa); czWarstwa(warstwa);
 });
-$('ap-porady').addEventListener('click', () => { $('tw-porady').hidden = false; $('tw-zaczynam').focus(); });
+$('ap-porady').addEventListener('click', () => {
+  const id = ust.apTryb === 'czesci' ? 'cz' : 'tw';
+  $(`${id}-porady`).hidden = false; $(`${id}-zaczynam`).focus();
+});
 $('tw-zaczynam').addEventListener('click', () => { ust.twPorady = false; zapisz(); $('tw-porady').hidden = true; $('ap-spust').focus(); });
 $('tw-galeria').addEventListener('click', () => $('tw-plik').click());
 $('tw-plik').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { twZPliku(await zPliku(f)); }
+  try { const src = await zPliku(f); if (ust.apTryb === 'czesci') czZPliku(src); else twZPliku(src); }
   catch { apInfo('Nie udało się odczytać tego zdjęcia.'); setTimeout(() => apInfo(''), 3000); }
 });
 for (const t of ['loadedmetadata', 'resize']) $('ap-wideo').addEventListener(t, twNakladka);

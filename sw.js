@@ -1,8 +1,8 @@
 'use strict';
 /* Praca bez internetu: najpierw sieć (żeby zawsze była najnowsza wersja), a bez sieci ostatnia zapamiętana kopia.
    Kasowane są tylko własne kopie (przedrostek "mx10-"), bo inne strony z tego samego adresu też mogą je mieć. */
-const KOPIA = 'mx10-4';
-const PLIKI = ['./', 'styl.css', 'rdzen.js', 'drukarka.js', 'aparat.js', 'twarz.js', 'ekran.js', 'manifest.webmanifest','ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maska-512.png'];
+const KOPIA = 'mx10-5';
+const PLIKI = ['./', 'styl.css', 'rdzen.js', 'drukarka.js', 'aparat.js', 'twarz.js', 'czesci.js', 'ekran.js', 'manifest.webmanifest','ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maska-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(KOPIA).then(k => k.addAll(PLIKI.map(p => new Request(p, { cache:'reload' })))).then(() => self.skipWaiting()));

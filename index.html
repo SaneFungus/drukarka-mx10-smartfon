@@ -109,6 +109,9 @@
     <div class="kadr-pole">
       <video id="ap-wideo" playsinline muted aria-label="Obraz z aparatu"></video>
       <canvas id="tw-nakladka" hidden aria-hidden="true"></canvas>
+      <canvas id="cz-nakladka" hidden aria-hidden="true"></canvas>
+      <div id="cz-krok" hidden role="status"><p><strong id="cz-krok-nr"></strong><span id="cz-krok-rada"></span></p>
+        <div class="cz-przyciski"><button id="cz-wstecz" aria-label="Poprzednia część">‹</button><button id="cz-pomin">Pomiń</button><button id="cz-gotowe">Dopasuj</button></div></div>
       <div id="tw-krok" hidden role="status"><p><strong id="tw-krok-nr"></strong><span id="tw-krok-rada"></span></p><button id="tw-krok-przycisk" hidden></button></div>
       <div id="ap-info" role="status" hidden><p id="ap-info-tekst"></p><button id="ap-telefon2" hidden>Użyj aparatu telefonu</button></div>
       <div id="tw-porady" hidden>
@@ -122,9 +125,21 @@
         </ul>
         <button class="glowny" id="tw-zaczynam">Zaczynam</button>
       </div>
+      <div id="cz-porady" hidden>
+        <p class="tytul">Twarz z części</p>
+        <p>Najpierw możesz zrobić zdjęcie całej twarzy jako bazę. Potem po kolei: włosy, oczy, nos, usta, brodę i uszy. Każdą część możesz pominąć albo wziąć z galerii.</p>
+        <ul>
+          <li>Podejdź blisko, aż część wypełni owal. Im bliżej, tym więcej szczegółów na wydruku.</li>
+          <li>Bazę rób jak w „Twarzy z trzech”: policzki przy konturze. Wtedy oczy, nos i usta trafią w otwory.</li>
+          <li>Ucho fotografuj z boku głowy.</li>
+          <li>Światło równe, z przodu. Części o podobnej jasności łączą się gładziej.</li>
+          <li>Mapka w rogu pokazuje, który otwór teraz wypełniasz.</li>
+        </ul>
+        <button class="glowny" id="cz-zaczynam">Zaczynam</button>
+      </div>
     </div>
     <div class="foto-dol spusty">
-      <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button></div>
+      <div class="tryby" id="ap-tryby" role="group" aria-label="Rodzaj zdjęcia"><button data-tryb="zdjecie">Zdjęcie</button><button data-tryb="twarz">Twarz z trzech</button><button data-tryb="czesci">Z części</button></div>
       <button class="ikona" id="ap-lampa" aria-label="Lampa" aria-pressed="false" hidden><svg><use href="#i-lampa"/></svg></button>
       <button id="ap-spust" aria-label="Zrób zdjęcie" disabled></button>
       <button class="ikona" id="ap-zamien" aria-label="Przełącz aparat przedni i tylny" hidden><svg><use href="#i-zamien"/></svg></button>
@@ -156,6 +171,28 @@
   </div>
 </div>
 
+<div id="czesci" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Dopasowanie części twarzy">
+  <div class="foto-gora"><button class="ikona" id="cz-zamknij" aria-label="Zamknij aparat"><svg><use href="#i-x"/></svg></button><p class="tw-tytul">Dopasuj części</p><button id="cz-od-nowa">Od nowa</button></div>
+  <div class="foto-srodek">
+    <div class="kadr-pole"><canvas id="cz-podglad" width="384" height="512" role="img" aria-label="Twarz złożona z części"></canvas></div>
+    <div class="foto-dol">
+      <p class="podp" id="cz-rada"></p>
+      <div class="chipy" id="cz-wybor" role="group" aria-label="Co ustawiasz"></div>
+      <div id="cz-kartka">
+        <label><span class="etykieta">Krycie kartki <output id="cz-o-krycie"></output></span><input type="range" id="cz-krycie" min="0" max="100" step="1"></label>
+        <div class="chipy" role="group" aria-label="Kartka"><button id="cz-kontur">Kontur</button><button id="cz-miekki">Miękki brzeg</button><button id="cz-wyrownaj">Wyrównaj jasność do bazy</button></div>
+      </div>
+      <div id="cz-ustaw" hidden>
+        <div class="chipy" id="cz-ruch" role="group" aria-label="Co przesuwa palec"><button data-ruch="czesc">Przesuń część</button><button data-ruch="zdjecie">Przesuń zdjęcie w otworze</button></div>
+        <label id="cz-pole-rozmiar"><span class="etykieta">Rozmiar <output id="cz-o-rozmiar"></output></span><input type="range" id="cz-rozmiar" min="50" max="200" step="1"></label>
+        <label id="cz-pole-zoom"><span class="etykieta">Powiększenie zdjęcia w otworze <output id="cz-o-zoom"></output></span><input type="range" id="cz-zoom" min="100" max="300" step="1"></label>
+        <label><span class="etykieta">Jasność <output id="cz-o-jasnosc"></output></span><input type="range" id="cz-jasnosc" min="-60" max="60" step="1"></label>
+      </div>
+      <div class="rzad"><button id="cz-powtorz">Zrób ponownie</button><button id="cz-usun" hidden>Usuń</button><button class="glowny" id="cz-dalej">Dalej</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="kadrowanie" class="ciemna" hidden role="dialog" aria-modal="true" aria-label="Kadrowanie zdjęcia">
   <div class="kadr-pole"><canvas id="kadr" width="10" height="10"></canvas></div>
   <p>Przeciągnij róg, żeby zmienić kadr, albo środek, żeby go przesunąć.</p>
@@ -171,6 +208,7 @@
 <script src="drukarka.js"></script>
 <script src="aparat.js"></script>
 <script src="twarz.js"></script>
+<script src="czesci.js"></script>
 <script src="ekran.js"></script>
 </body>
 </html>
